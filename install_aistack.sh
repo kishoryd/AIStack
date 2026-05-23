@@ -265,7 +265,7 @@ begin_env axolotl 3.11 && {
 log "=== FINETUNING: llamafactory ==="
 begin_env llamafactory 3.11 && {
     pip_install_with_index llamafactory "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install llamafactory "ninja" "llamafactory[metrics]" "flash-attn --no-build-isolation"
+    pip_install llamafactory "ninja" "llamafactory[metrics]"
     register_kernel llamafactory "LLaMA-Factory (Python 3.11)"
     [[ -z "${ENV_ERRORS[llamafactory]}" ]] && mark_done llamafactory
 }
