@@ -19,7 +19,7 @@ set -o pipefail
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="$AISTACK_DIR/miniconda3"
+CONDA_DIR="/home/apps/miniconda3"
 REQUIREMENTS_FILE="$AISTACK_DIR/requirements.txt"
 Theano_YML_FILE="$AISTACK_DIR/envs/Theano.yml"
 Caffe_YML_FILE="$AISTACK_DIR/envs/Caffe.yml"
@@ -29,9 +29,9 @@ TORCH_CU130="https://download.pytorch.org/whl/cu130"
 
 SPACK_DIR="/home/apps/spack"
 
-LOG_DIR="$AISTACK_DIR/logs"
+LOG_DIR="/home/apps/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
-DONE_DIR="$AISTACK_DIR/.done"   # sentinel files live here
+DONE_DIR="/home/apps/.done"   # sentinel files live here
 
 mkdir -p "$LOG_DIR" "$DONE_DIR"
 # append to summary log across restarts — do NOT truncate with >

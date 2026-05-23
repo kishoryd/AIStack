@@ -20,10 +20,10 @@ FORCE=0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="$AISTACK_DIR/miniconda3"
-LOG_DIR="$AISTACK_DIR/logs/tests"
+CONDA_DIR="/home/apps/miniconda3"
+LOG_DIR="/home/apps/logs/tests"
 SUMMARY_LOG="$LOG_DIR/test_summary.log"
-PASS_DIR="$AISTACK_DIR/.done/tests"   # sentinel: <env>.pass
+PASS_DIR="/home/apps/.done/tests"   # sentinel: <env>.pass
 
 mkdir -p "$LOG_DIR" "$PASS_DIR"
 

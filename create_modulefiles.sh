@@ -21,9 +21,9 @@ FORCE=0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="$AISTACK_DIR/miniconda3"
+CONDA_DIR="/home/apps/miniconda3"
 MODULEFILE_DIR="/usr/share/modulefiles/AIStack"
-LOG_DIR="$AISTACK_DIR/logs"
+LOG_DIR="/home/apps/logs"
 SUMMARY_LOG="$LOG_DIR/modulefiles.log"
 
 mkdir -p "$LOG_DIR"

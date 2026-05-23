@@ -11,15 +11,15 @@ set -o pipefail
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="$AISTACK_DIR/miniconda3"
-JUPYTERHUB_DIR="/usr/local/jupyterhub"
+CONDA_DIR="/home/apps/miniconda3"
+JUPYTERHUB_DIR="/home/apps/jupyterhub"
 CONFIG_FILE="$JUPYTERHUB_DIR/jupyterhub_config.py"
 SERVICE_FILE="/etc/systemd/system/jupyterhub.service"
 
 JUPYTERHUB_VERSION="4.1.0"
 JUPYTERHUB_TARBALL="/tmp/jupyterhub-${JUPYTERHUB_VERSION}.tar.gz"
 
-LOG_DIR="$AISTACK_DIR/logs"
+LOG_DIR="/home/apps/logs"
 SUMMARY_LOG="$LOG_DIR/jupyterhub_uninstall.log"
 
 mkdir -p "$LOG_DIR"
