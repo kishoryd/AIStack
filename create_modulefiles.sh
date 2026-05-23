@@ -126,6 +126,21 @@ log "Modulefile dir : $MODULEFILE_DIR"
 log "Conda base     : $CONDA_DIR"
 [[ $FORCE -eq 1 ]] && log "  --force: overwriting all existing modulefiles"
 
+# ── STEP 1: Ensure Lmod is installed
+if command -v module &>/dev/null || [[ -f /usr/share/lmod/lmod/init/bash ]]; then
+    log_skip "Lmod already installed"
+else
+    log "Installing Lmod via dnf..."
+    if ! command -v dnf &>/dev/null; then
+        echo -e "${RED}ERROR: dnf not found — cannot install Lmod. Install it manually.${NC}"
+        exit 1
+    fi
+    dnf install -y Lmod >> "$LOG_DIR/lmod_install.log" 2>&1 \
+        && log_pass "Lmod installed" \
+        || { echo -e "${RED}ERROR: Lmod installation failed — check $LOG_DIR/lmod_install.log${NC}"; exit 1; }
+fi
+
+# ── STEP 2: Create modulefile directory
 if ! mkdir -p "$MODULEFILE_DIR" 2>/dev/null; then
     echo -e "${RED}ERROR: Cannot create $MODULEFILE_DIR — try running with sudo.${NC}"
     exit 1
