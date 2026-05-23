@@ -44,7 +44,7 @@ ENV_DEFS=(
     "transformers|Transformers|Finetuning|HuggingFace Transformers finetuning (CUDA 12.8)"
     "accelerate|Accelerate|Finetuning|HuggingFace Accelerate distributed training (CUDA 12.8)"
     "trl|TRL|Finetuning|HuggingFace TRL RLHF finetuning (CUDA 12.8)"
-    "axolotl|Axolotl|Finetuning|Axolotl with DeepSpeed and Flash Attention (CUDA 12.8)"
+    "axolotl|Axolotl|Finetuning|Axolotl with DeepSpeed (CUDA 12.8)"
     "llamafactory|LLaMA-Factory|Finetuning|LLaMA-Factory finetuning framework (CUDA 12.8)"
     "torchtune|TorchTune|Finetuning|PyTorch native finetuning with TorchTune (CUDA 12.8)"
     "deepspeed|DeepSpeed|Finetuning|Microsoft DeepSpeed distributed training (CUDA 13.0)"

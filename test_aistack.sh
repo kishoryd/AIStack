@@ -188,7 +188,7 @@ run_env_test unsloth      3.11 "torch torchvision torchaudio unsloth triton jupy
 run_env_test transformers 3.11 "torch torchvision torchaudio transformers jupyter jupyterlab ipykernel"     "Transformers"
 run_env_test accelerate   3.11 "torch torchvision torchaudio accelerate jupyter jupyterlab ipykernel"       "Accelerate"
 run_env_test trl          3.11 "torch torchvision torchaudio trl jupyter jupyterlab ipykernel"              "TRL"
-run_env_test axolotl      3.11 "torch torchvision torchaudio axolotl jupyter jupyterlab ipykernel"          "Axolotl"
+run_env_test axolotl      3.11 "torch torchaudio axolotl jupyter jupyterlab ipykernel"                    "Axolotl"
 run_env_test llamafactory 3.11 "torch torchvision torchaudio llamafactory jupyter jupyterlab ipykernel"     "LLaMA-Factory"
 run_env_test torchtune    3.11 "torch torchvision torchaudio torchtune jupyter jupyterlab ipykernel"        "TorchTune"
 run_env_test deepspeed    3.11 "torch torchvision torchaudio deepspeed jupyter jupyterlab ipykernel"        "DeepSpeed"
@@ -208,8 +208,8 @@ run_env_test haystack     3.11 "torch haystack chromadb qdrant_client sentence_t
 section "LEGACY"
 run_env_test pytorch  3.10 "torch torchvision jupyter jupyterlab ipykernel"  "PyTorch"
 run_env_test tensorflow   3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
-run_env_test Theano       3.11 "theano jupyter jupyterlab ipykernel"              "Theano"
-run_env_test Caffe        3.11 "caffe jupyter jupyterlab ipykernel"               "Caffe"
+run_env_test Theano       3.10 "theano jupyter jupyterlab ipykernel"              "Theano"
+run_env_test Caffe        3.10 "caffe jupyter jupyterlab ipykernel"               "Caffe"
 
 # =============================================================================
 # FINAL REPORT

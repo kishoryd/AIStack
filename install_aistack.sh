@@ -27,6 +27,8 @@ Caffe_YML_FILE="$AISTACK_DIR/envs/Caffe.yml"
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
 
+SPACK_DIR="/home/apps/spack"
+
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
 DONE_DIR="$AISTACK_DIR/.done"   # sentinel files live here
@@ -254,8 +256,8 @@ begin_env trl 3.11 && {
 
 log "=== FINETUNING: axolotl ==="
 begin_env axolotl 3.11 && {
-    pip_install_with_index axolotl "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install axolotl "ninja" "packaging" "axolotl[flash-attn,deepspeed]"
+    pip_install_with_index axolotl "$TORCH_CU128" "torch" "torchaudio"
+    pip_install axolotl "ninja" "packaging" "axolotl[deepspeed]"
     register_kernel axolotl "Axolotl (Python 3.11)"
     [[ -z "${ENV_ERRORS[axolotl]}" ]] && mark_done axolotl
 }
@@ -270,7 +272,7 @@ begin_env llamafactory 3.11 && {
 
 log "=== FINETUNING: torchtune ==="
 begin_env torchtune 3.11 && {
-    pip_install_with_index torchtune "$TORCH_CU128" "torch" "torchvision" "torchaudio"
+    pip_install_with_index torchtune "$TORCH_CU128" "torch" "torchvision" "torchaudio" "torchao"
     pip_install torchtune "torchtune"
     register_kernel torchtune "TorchTune (Python 3.11)"
     [[ -z "${ENV_ERRORS[torchtune]}" ]] && mark_done torchtune
