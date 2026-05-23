@@ -27,7 +27,6 @@ Caffe_YML_FILE="$AISTACK_DIR/envs/Caffe.yml"
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
 
-SPACK_DIR="/home/apps/spack"
 
 LOG_DIR="/home/apps/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
@@ -161,24 +160,6 @@ begin_env() {
     return 0                       # rc 0 or 2 → proceed
 }
 
-# ─── SPACK CUDA LOADER ───────────────────────────────────────────────────────
-load_cuda_130() {
-    if [[ -f /home/apps/spack/share/spack/setup-env.sh ]]; then
-        source /home/apps/spack/share/spack/setup-env.sh
-        if ! spack find cuda@13.0.2 &>/dev/null; then
-            log "Installing cuda@13.0.2 via spack (this may take a while)..."
-            spack install -j 10 cuda@13.0.2
-        fi
-        spack load cuda@13.0.2
-        export CUDA_HOME=$(dirname $(dirname $(which nvcc)))
-        export PATH="$CUDA_HOME/bin:$PATH"
-        export LD_LIBRARY_PATH="$CUDA_HOME/lib64:$LD_LIBRARY_PATH"
-        log_ok "CUDA 13.0.2 loaded (CUDA_HOME=$CUDA_HOME)"
-    else
-        log_err "Spack not found — skipping CUDA 13.0.2 load"
-    fi
-}
-
 # =============================================================================
 # STEP 1 — MINICONDA
 # =============================================================================
@@ -279,7 +260,6 @@ begin_env torchtune 3.11 && {
 }
 
 log "=== FINETUNING: deepspeed ==="
-load_cuda_130
 begin_env deepspeed 3.11 && {
     pip_install_with_index deepspeed "$TORCH_CU130" "torch" "torchvision" "torchaudio"
     pip_install deepspeed "deepspeed"
@@ -334,7 +314,6 @@ begin_env tgi 3.11 && {
 # =============================================================================
 # RAG
 # =============================================================================
-load_cuda_130
 
 log "=== RAG: llamaindex ==="
 begin_env llamaindex 3.11 && {
