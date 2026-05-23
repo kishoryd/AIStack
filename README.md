@@ -1,0 +1,2 @@
+# AIStack
+Installation on Shavak
