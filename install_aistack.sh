@@ -195,7 +195,8 @@ fi
 
 export PATH="$CONDA_DIR/bin:$PATH"
 source "$CONDA_DIR/bin/activate"
-conda tos accept --override-channels 2>/dev/null || true
+export CONDA_TOS_ACCEPTED=true
+conda tos accept 2>/dev/null || true
 log_ok "Conda ready"
 
 # =============================================================================
