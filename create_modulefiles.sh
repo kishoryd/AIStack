@@ -106,28 +106,17 @@ conflict AIStack
 setenv CONDA_SHLVL         1
 setenv CONDA_PREFIX        $conda_prefix
 setenv CONDA_DEFAULT_ENV   $env
+setenv CONDA_EXE           $CONDA_DIR/bin/conda
+setenv CONDA_PYTHON_EXE    $CONDA_DIR/bin/python
 setenv VIRTUAL_ENV         $conda_prefix
 setenv AISTACK_ENV         $env
 setenv AISTACK_ENV_DISPLAY $display
 setenv AISTACK_CATEGORY    $category
 
-# ── Prepend env bin to PATH
+# ── Prepend conda base (for the conda command) then env bin to PATH
 prepend-path PATH            $conda_prefix/bin
+prepend-path PATH            $CONDA_DIR/bin
 prepend-path LD_LIBRARY_PATH $conda_prefix/lib
-
-# ── On load: activate conda base then the target env
-if { [module-info mode load] } {
-    puts stderr "Activating AIStack env: $env"
-    system "source $CONDA_DIR/bin/activate && conda activate $env"
-}
-
-# ── On unload: deactivate cleanly
-if { [module-info mode remove] } {
-    puts stderr "Deactivating AIStack env: $env"
-    system "conda deactivate"
-    system "conda deactivate"
-    system "/bin/bash"
-}
 EOF
 }
 
