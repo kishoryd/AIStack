@@ -78,7 +78,7 @@ if "$CONDA_DIR/bin/python" -c "import jupyterhub" &>/dev/null; then
     log_skip "JupyterHub already installed in conda base"
 else
     log "Installing JupyterHub, JupyterLab, nb_conda_kernels..."
-    "$CONDA_DIR/bin/pip" install jupyterhub jupyterlab nb_conda_kernels \
+    "$CONDA_DIR/bin/pip" install jupyterhub jupyterlab \
         >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
         && log_ok "JupyterHub installed" \
         || { log_err "JupyterHub install failed — check $LOG_DIR/jupyterhub_install.log"; exit 1; }
