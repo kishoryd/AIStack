@@ -141,7 +141,7 @@ register_kernel() {
         -q >> "$LOG_DIR/${env}.log" 2>&1
     log "  Registering JupyterHub kernel for '$env'..."
     "$CONDA_DIR/envs/$env/bin/python" -m ipykernel install \
-        --name "$env" --display-name "$display" \
+        --sys-prefix --name "$env" --display-name "$display" \
         >> "$LOG_DIR/${env}.log" 2>&1 \
         && log_ok "Kernel '$display' registered" \
         || log_err "Kernel registration failed for '$env'"
@@ -439,7 +439,7 @@ elif [[ -f "$Theano_YML_FILE" ]]; then
     THEANO_PYTHON=$(find "$CONDA_DIR/envs/Theano/bin" -name python3 2>/dev/null | head -1)
     [[ -n "$THEANO_PYTHON" ]] && {
         "$CONDA_DIR/envs/Theano/bin/pip" install jupyter jupyterlab notebook ipykernel ipywidgets -q
-        "$THEANO_PYTHON" -m ipykernel install --name Theano --display-name "Theano"
+        "$THEANO_PYTHON" -m ipykernel install --sys-prefix --name Theano --display-name "Theano"
         mark_done Theano
     }
 else
@@ -461,7 +461,7 @@ elif [[ -f "$Caffe_YML_FILE" ]]; then
     CAFFE_PYTHON=$(find "$CONDA_DIR/envs/Caffe/bin" -name python3 2>/dev/null | head -1)
     [[ -n "$CAFFE_PYTHON" ]] && {
         "$CONDA_DIR/envs/Caffe/bin/pip" install jupyter jupyterlab notebook ipykernel ipywidgets -q
-        "$CAFFE_PYTHON" -m ipykernel install --name Caffe --display-name "Caffe"
+        "$CAFFE_PYTHON" -m ipykernel install --sys-prefix --name Caffe --display-name "Caffe"
         mark_done Caffe
     }
 else

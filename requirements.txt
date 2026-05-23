@@ -54,7 +54,6 @@ nose
 scapy
 ipython
 sympy
-pyqt
 eli5
 pyglet
 peewee
