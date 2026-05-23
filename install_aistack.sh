@@ -198,19 +198,19 @@ log_ok "Conda ready"
 # =============================================================================
 # STEP 2 — BASE REQUIREMENTS
 # =============================================================================
-if is_done "base"; then
-    log_skip "Base requirements already installed"
-else
-    log "=== BASE ENVIRONMENT ==="
-    conda install -y pip >> "$LOG_DIR/base.log" 2>&1
-    if [[ -f "$REQUIREMENTS_FILE" ]]; then
-        pip install -r "$REQUIREMENTS_FILE" >> "$LOG_DIR/base.log" 2>&1 \
-            && { log_ok "base requirements installed"; mark_done "base"; } \
-            || log_err "Some base requirements failed — check $LOG_DIR/base.log"
-    else
-        log_err "Requirements file not found: $REQUIREMENTS_FILE"
-    fi
-fi
+# if is_done "base"; then
+#     log_skip "Base requirements already installed"
+# else
+#     log "=== BASE ENVIRONMENT ==="
+#     conda install -y pip >> "$LOG_DIR/base.log" 2>&1
+#     if [[ -f "$REQUIREMENTS_FILE" ]]; then
+#         pip install -r "$REQUIREMENTS_FILE" >> "$LOG_DIR/base.log" 2>&1 \
+#             && { log_ok "base requirements installed"; mark_done "base"; } \
+#             || log_err "Some base requirements failed — check $LOG_DIR/base.log"
+#     else
+#         log_err "Requirements file not found: $REQUIREMENTS_FILE"
+#     fi
+# fi
 
 # =============================================================================
 # FINETUNING
