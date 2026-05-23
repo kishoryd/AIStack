@@ -117,7 +117,7 @@ if [[ -f "$CONDA_DIR/bin/conda" ]]; then
         [[ "$line" =~ ^# || "$line" =~ ^base || -z "$line" ]] && continue
 
         env=$(echo "$line" | awk '{print $1}')
-        kernel_dir="$CONDA_DIR/envs/$env/share/jupyter/kernels/$env"
+        kernel_dir="$CONDA_DIR/share/jupyter/kernels/$env"
 
         if [[ -d "$kernel_dir" ]]; then
             rm -rf "$kernel_dir" \

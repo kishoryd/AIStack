@@ -23,7 +23,7 @@ JUPYTERHUB_DIR="/home/apps/jupyterhub"
 CONFIG_FILE="$JUPYTERHUB_DIR/jupyterhub_config.py"
 SERVICE_FILE="/etc/systemd/system/jupyterhub.service"
 
-JUPYTERHUB_VERSION="4.1.0"
+JUPYTERHUB_VERSION="4.0.1"
 JUPYTERHUB_URL="https://github.com/jupyterhub/jupyterhub/archive/refs/tags/${JUPYTERHUB_VERSION}.tar.gz"
 JUPYTERHUB_TARBALL="/tmp/jupyterhub-${JUPYTERHUB_VERSION}.tar.gz"
 JUPYTERHUB_SRC="/tmp/jupyterhub-${JUPYTERHUB_VERSION}"
@@ -67,7 +67,7 @@ if command -v configurable-http-proxy &>/dev/null; then
     log_skip "configurable-http-proxy already installed"
 else
     log "Installing configurable-http-proxy..."
-    npm install -g configurable-http-proxy >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
+    npm install -g configurable-http-proxy@4.6.3 >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
         && log_ok "configurable-http-proxy installed" \
         || { log_err "configurable-http-proxy install failed — check $LOG_DIR/jupyterhub_install.log"; exit 1; }
 fi
@@ -133,15 +133,8 @@ else
 
 # ── AIStack JupyterHub settings ──────────────────────────────────────────────
 c = get_config()  # noqa
-c.JupyterHub.ip        = '0.0.0.0'
-c.JupyterHub.port      = 9889
-c.JupyterHub.hub_port  = 8082
-c.ConfigurableHTTPProxy.api_url = 'http://127.0.0.1:8002'
-c.Authenticator.allow_all      = True
-c.Authenticator.allowed_users  = set()
-
-# nb_conda_kernels auto-discovers all AIStack conda envs with ipykernel installed
-c.KernelSpecManager.ensure_native_kernel = False
+c.JupyterHub.bind_url     = 'http://0.0.0.0:8000'
+c.Authenticator.allow_all = True
 PYEOF
     log_ok "Config updated"
 fi
@@ -201,13 +194,13 @@ while IFS= read -r line; do
         continue
     fi
 
-    kernel_dir="$CONDA_DIR/envs/$env/share/jupyter/kernels/$env"
+    kernel_dir="$CONDA_DIR/share/jupyter/kernels/$env"
     if [[ -d "$kernel_dir" ]]; then
         log_skip "Kernel '$env' already registered"
     else
         log "Registering kernel for '$env'..."
         "$env_python" -m ipykernel install \
-            --sys-prefix --name "$env" --display-name "$env" \
+            --prefix "$CONDA_DIR" --name "$env" --display-name "$env" \
             >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
             && log_ok "Kernel '$env' registered" \
             || log_err "Kernel '$env' registration failed"
@@ -223,7 +216,7 @@ echo ""
 echo "════════════════════════════════════════════════════════════"
 echo "            JupyterHub Installation Complete"
 echo "════════════════════════════════════════════════════════════"
-echo "  URL         : http://$HOST_IP:9889"
+echo "  URL         : http://$HOST_IP:8000"
 echo "  Config      : $CONFIG_FILE"
 echo "  Service     : systemctl status jupyterhub"
 echo "  Logs        : journalctl -u jupyterhub -f"
