@@ -23,6 +23,11 @@ JUPYTERHUB_DIR="/usr/local/jupyterhub"
 CONFIG_FILE="$JUPYTERHUB_DIR/jupyterhub_config.py"
 SERVICE_FILE="/etc/systemd/system/jupyterhub.service"
 
+JUPYTERHUB_VERSION="4.1.0"
+JUPYTERHUB_URL="https://github.com/jupyterhub/jupyterhub/archive/refs/tags/${JUPYTERHUB_VERSION}.tar.gz"
+JUPYTERHUB_TARBALL="/tmp/jupyterhub-${JUPYTERHUB_VERSION}.tar.gz"
+JUPYTERHUB_SRC="/tmp/jupyterhub-${JUPYTERHUB_VERSION}"
+
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/jupyterhub_install.log"
 
@@ -70,18 +75,40 @@ fi
 # =============================================================================
 # STEP 2 — JupyterHub in conda base
 # =============================================================================
-log "=== STEP 2: JupyterHub install ==="
+log "=== STEP 2: JupyterHub install (v${JUPYTERHUB_VERSION}) ==="
 
 source "$CONDA_DIR/bin/activate"
 
 if "$CONDA_DIR/bin/python" -c "import jupyterhub" &>/dev/null; then
     log_skip "JupyterHub already installed in conda base"
 else
-    log "Installing JupyterHub, JupyterLab, nb_conda_kernels..."
-    "$CONDA_DIR/bin/pip" install jupyterhub jupyterlab \
+    # Download tarball
+    if [[ ! -f "$JUPYTERHUB_TARBALL" ]]; then
+        log "Downloading JupyterHub ${JUPYTERHUB_VERSION} from GitHub..."
+        wget -q "$JUPYTERHUB_URL" -O "$JUPYTERHUB_TARBALL" \
+            >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
+            && log_ok "Tarball downloaded to $JUPYTERHUB_TARBALL" \
+            || { log_err "Download failed — check $LOG_DIR/jupyterhub_install.log"; exit 1; }
+    else
+        log_skip "Tarball already at $JUPYTERHUB_TARBALL"
+    fi
+
+    # Extract
+    log "Extracting JupyterHub source..."
+    tar -xzf "$JUPYTERHUB_TARBALL" -C /tmp \
         >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
-        && log_ok "JupyterHub installed" \
+        && log_ok "Source extracted to $JUPYTERHUB_SRC" \
+        || { log_err "Extraction failed — check $LOG_DIR/jupyterhub_install.log"; exit 1; }
+
+    # Install from source
+    log "Installing JupyterHub from source..."
+    "$CONDA_DIR/bin/pip" install "$JUPYTERHUB_SRC" jupyterlab \
+        >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
+        && log_ok "JupyterHub ${JUPYTERHUB_VERSION} installed" \
         || { log_err "JupyterHub install failed — check $LOG_DIR/jupyterhub_install.log"; exit 1; }
+
+    # Cleanup source tree (keep tarball for idempotency check)
+    rm -rf "$JUPYTERHUB_SRC"
 fi
 
 # =============================================================================
