@@ -219,7 +219,7 @@ log_ok "Conda ready"
 log "=== FINETUNING: unsloth ==="
 begin_env unsloth 3.11 && {
     pip_install_with_index unsloth "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install unsloth "ninja" "triton" "unsloth" "flash-attn --no-build-isolation"
+    pip_install unsloth "ninja" "triton" "unsloth"
     register_kernel unsloth "Unsloth (Python 3.11)"
     [[ -z "${ENV_ERRORS[unsloth]}" ]] && mark_done unsloth
 }
