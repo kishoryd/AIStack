@@ -19,7 +19,7 @@ SERVICE_FILE="/etc/systemd/system/jupyterhub.service"
 JUPYTERHUB_VERSION="4.1.0"
 JUPYTERHUB_TARBALL="/tmp/jupyterhub-${JUPYTERHUB_VERSION}.tar.gz"
 
-LOG_DIR="/home/apps/logs"
+LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/jupyterhub_uninstall.log"
 
 mkdir -p "$LOG_DIR"

@@ -5,7 +5,7 @@ AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
-LOG_DIR="/home/apps/logs"
+LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
 DONE_DIR="$LOG_DIR/done"
 
