@@ -58,8 +58,8 @@ ENV_DEFS=(
     "haystack|Haystack|RAG|RAG pipelines with Haystack AI (CUDA 13.0)"
     "pytorch|PyTorch|Legacy|PyTorch workloads (CUDA 12.6, Python 3.10)"
     "tensorflow|TensorFlow-GPU|Legacy|TensorFlow GPU workloads (Python 3.10)"
-    "Theano|Theano|Legacy|Theano deep learning framework"
-    "Caffe|Caffe|Legacy|Caffe deep learning framework"
+    "Theano|Theano|Legacy|Theano with GPU support via pygpu (Python 3.10)"
+    "Caffe|Caffe|Legacy|Caffe with GPU support (Python 3.7)"
 )
 
 # ─── MODULEFILE WRITER ───────────────────────────────────────────────────────

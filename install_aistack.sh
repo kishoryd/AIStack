@@ -21,8 +21,6 @@ set -o pipefail
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
 REQUIREMENTS_FILE="$AISTACK_DIR/requirements.txt"
-Theano_YML_FILE="$AISTACK_DIR/envs/Theano.yml"
-Caffe_YML_FILE="$AISTACK_DIR/envs/Caffe.yml"
 
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
@@ -100,6 +98,15 @@ pip_install_with_index() {
         fi
     done
     [[ ${#failed[@]} -gt 0 ]] && ENV_ERRORS[$env]="${ENV_ERRORS[$env]} ${failed[*]}"
+}
+
+conda_install() {
+    local env="$1"; shift
+    log "  conda install $* (env: $env)"
+    "$CONDA_DIR/bin/conda" install -n "$env" -y "$@" \
+        >> "$LOG_DIR/${env}.log" 2>&1 \
+        && log_ok "$*" \
+        || { log_err "$* FAILED"; ENV_ERRORS[$env]="${ENV_ERRORS[$env]} $*"; }
 }
 
 # ─── CONDA CREATE (idempotent) ───────────────────────────────────────────────
@@ -405,49 +412,19 @@ begin_env tensorflow 3.10 && {
     [[ -z "${ENV_ERRORS[tensorflow]}" ]] && mark_done tensorflow
 }
 
-log "=== LEGACY: Theano (from yml) ==="
-if is_done "Theano"; then
-    log_skip "Theano env already complete"
-elif [[ -f "$Theano_YML_FILE" ]]; then
-    if ! env_exists Theano; then
-        "$CONDA_DIR/bin/conda" env create -f "$Theano_YML_FILE" \
-            >> "$LOG_DIR/Theano.log" 2>&1 \
-            && log_ok "Theano env created" \
-            || log_err "Theano env creation failed — check $LOG_DIR/Theano.log"
-    else
-        log_skip "Theano env directory exists — skipping conda create"
-    fi
-    THEANO_PYTHON=$(find "$CONDA_DIR/envs/Theano/bin" -name python3 2>/dev/null | head -1)
-    [[ -n "$THEANO_PYTHON" ]] && {
-        "$CONDA_DIR/envs/Theano/bin/pip" install jupyter jupyterlab notebook ipykernel ipywidgets -q
-        "$THEANO_PYTHON" -m ipykernel install --sys-prefix --name Theano --display-name "Theano"
-        mark_done Theano
-    }
-else
-    log_err "Theano.yml not found at $Theano_YML_FILE"
-fi
+log "=== LEGACY: Theano ==="
+begin_env Theano 3.10 && {
+    conda_install Theano -c conda-forge theano pygpu
+    register_kernel Theano "Theano (Python 3.10)"
+    [[ -z "${ENV_ERRORS[Theano]}" ]] && mark_done Theano
+}
 
-log "=== LEGACY: Caffe (from yml) ==="
-if is_done "Caffe"; then
-    log_skip "Caffe env already complete"
-elif [[ -f "$Caffe_YML_FILE" ]]; then
-    if ! env_exists Caffe; then
-        "$CONDA_DIR/bin/conda" env create -f "$Caffe_YML_FILE" \
-            >> "$LOG_DIR/Caffe.log" 2>&1 \
-            && log_ok "Caffe env created" \
-            || log_err "Caffe env creation failed — check $LOG_DIR/Caffe.log"
-    else
-        log_skip "Caffe env directory exists — skipping conda create"
-    fi
-    CAFFE_PYTHON=$(find "$CONDA_DIR/envs/Caffe/bin" -name python3 2>/dev/null | head -1)
-    [[ -n "$CAFFE_PYTHON" ]] && {
-        "$CONDA_DIR/envs/Caffe/bin/pip" install jupyter jupyterlab notebook ipykernel ipywidgets -q
-        "$CAFFE_PYTHON" -m ipykernel install --sys-prefix --name Caffe --display-name "Caffe"
-        mark_done Caffe
-    }
-else
-    log_err "Caffe.yml not found at $Caffe_YML_FILE"
-fi
+log "=== LEGACY: Caffe ==="
+begin_env Caffe 3.7 && {
+    conda_install Caffe -c anaconda caffe-gpu
+    register_kernel Caffe "Caffe (Python 3.7)"
+    [[ -z "${ENV_ERRORS[Caffe]}" ]] && mark_done Caffe
+}
 
 # =============================================================================
 # SUMMARY
