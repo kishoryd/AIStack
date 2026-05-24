@@ -7,7 +7,7 @@ TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
 LOG_DIR="/home/apps/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
-DONE_DIR="/home/apps/.done"
+DONE_DIR="$LOG_DIR/done"
 
 mkdir -p "$LOG_DIR" "$DONE_DIR"
 
@@ -323,7 +323,7 @@ begin_env haystack 3.11 && {
         "chroma-haystack" "qdrant-haystack" "milvus-haystack" \
         "pgvector-haystack" "elasticsearch-haystack" \
         "sentence-transformers" "FlagEmbedding" "fastembed" \
-        "chromadb" "qdrant-client" "pymilvus" "faiss-gpu" \
+        "chromadb" "qdrant-client" "pymilvus" \
         "psycopg2-binary" "pgvector" "elasticsearch" \
         "pypdf" "docx2txt" "unstructured" "pymupdf" "markdown" \
         "ragatouille" "flashrank" \
@@ -367,6 +367,13 @@ begin_env Caffe 3.7 && {
     [[ -z "${ENV_ERRORS[Caffe]}" ]] && mark_done Caffe
 }
 
+log "=== LEGACY: rapids ==="
+begin_env rapids 3.7 && {
+    conda_install rapids -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
+    register_kernel rapids "Rapids (Python 3.7)"
+    [[ -z "${ENV_ERRORS[rapids]}" ]] && mark_done rapids
+}
+
 # =============================================================================
 # SUMMARY
 # =============================================================================
@@ -374,7 +381,7 @@ ALL_ENVS=(
     unsloth transformers accelerate trl axolotl llamafactory torchtune deepspeed
     vllm sglang lmdeploy rayserve tgi
     llamaindex langchain haystack
-    pytorch tensorflow Theano Caffe
+    pytorch tensorflow Theano Caffe rapids
 )
 
 echo ""

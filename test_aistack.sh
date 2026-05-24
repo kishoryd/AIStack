@@ -23,7 +23,7 @@ AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
 LOG_DIR="/home/apps/logs/tests"
 SUMMARY_LOG="$LOG_DIR/test_summary.log"
-PASS_DIR="/home/apps/.done/tests"   # sentinel: <env>.pass
+PASS_DIR="/home/apps/logs/done/tests"   # sentinel: <env>.pass
 
 mkdir -p "$LOG_DIR" "$PASS_DIR"
 
@@ -210,6 +210,7 @@ run_env_test pytorch  3.10 "torch torchvision jupyter jupyterlab ipykernel"  "Py
 run_env_test tensorflow   3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
 run_env_test Theano       3.10 "theano pygpu jupyter jupyterlab ipykernel"        "Theano"
 run_env_test Caffe        3.7  "caffe jupyter jupyterlab ipykernel"               "Caffe"
+run_env_test rapids       3.7  "cudf jupyter jupyterlab ipykernel"                "Rapids"
 
 # =============================================================================
 # FINAL REPORT
@@ -218,7 +219,7 @@ ALL_ENVS=(
     unsloth transformers accelerate trl axolotl llamafactory torchtune deepspeed
     vllm sglang lmdeploy rayserve tgi
     llamaindex langchain haystack
-    pytorch tensorflow Theano Caffe
+    pytorch tensorflow Theano Caffe rapids
 )
 
 echo "" | tee -a "$SUMMARY_LOG"

@@ -60,6 +60,7 @@ ENV_DEFS=(
     "tensorflow|TensorFlow-GPU|Legacy|TensorFlow GPU workloads (Python 3.10)"
     "Theano|Theano|Legacy|Theano with GPU support via pygpu (Python 3.10)"
     "Caffe|Caffe|Legacy|Caffe with GPU support (Python 3.7)"
+    "rapids|Rapids|Legacy|RAPIDS AI cuDF GPU dataframe (CUDA 11.2, Python 3.7)"
 )
 
 # ─── MODULEFILE WRITER ───────────────────────────────────────────────────────
