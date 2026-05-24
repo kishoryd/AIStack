@@ -20,7 +20,6 @@ set -o pipefail
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
-REQUIREMENTS_FILE="$AISTACK_DIR/requirements.txt"
 
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
@@ -189,22 +188,6 @@ export CONDA_TOS_ACCEPTED=true
 conda tos accept 2>/dev/null || true
 log_ok "Conda ready"
 
-# =============================================================================
-# STEP 2 — BASE REQUIREMENTS
-# =============================================================================
-if is_done "base"; then
-    log_skip "Base requirements already installed"
-else
-    log "=== BASE ENVIRONMENT ==="
-    conda install -y pip >> "$LOG_DIR/base.log" 2>&1
-    if [[ -f "$REQUIREMENTS_FILE" ]]; then
-        pip install -r "$REQUIREMENTS_FILE" >> "$LOG_DIR/base.log" 2>&1 \
-            && { log_ok "base requirements installed"; mark_done "base"; } \
-            || log_err "Some base requirements failed — check $LOG_DIR/base.log"
-    else
-        log_err "Requirements file not found: $REQUIREMENTS_FILE"
-    fi
-fi
 
 # =============================================================================
 # FINETUNING
