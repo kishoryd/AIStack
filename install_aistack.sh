@@ -254,7 +254,7 @@ begin_env rayserve 3.11 && {
 log "=== INFERENCE: tgi ==="
 begin_env tgi 3.11 && {
     pip_install_with_index tgi "$TORCH_CU130" "torch" "torchvision" "torchaudio"
-    pip_install tgi "text-generation" "text-generation-server"
+    pip_install tgi "text-generation"
     register_kernel tgi "TGI (Python 3.11)"
     [[ -z "${ENV_ERRORS[tgi]}" ]] && mark_done tgi
 }
