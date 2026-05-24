@@ -28,7 +28,7 @@ JUPYTERHUB_URL="https://github.com/jupyterhub/jupyterhub/archive/refs/tags/${JUP
 JUPYTERHUB_TARBALL="/tmp/jupyterhub-${JUPYTERHUB_VERSION}.tar.gz"
 JUPYTERHUB_SRC="/tmp/jupyterhub-${JUPYTERHUB_VERSION}"
 
-LOG_DIR="/home/apps/logs"
+LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/jupyterhub_install.log"
 
 mkdir -p "$LOG_DIR"
@@ -112,9 +112,23 @@ else
 fi
 
 # =============================================================================
-# STEP 3 — JupyterHub directory & config
+# STEP 3 — SELinux context for miniconda binaries
 # =============================================================================
-log "=== STEP 3: JupyterHub config ==="
+log "=== STEP 3: SELinux context ==="
+
+if command -v chcon &>/dev/null; then
+    chcon -R -t bin_t "$CONDA_DIR/bin/" \
+        >> "$LOG_DIR/jupyterhub_install.log" 2>&1 \
+        && log_ok "SELinux bin_t context applied to $CONDA_DIR/bin/" \
+        || log_err "chcon failed — SELinux may block JupyterHub execution"
+else
+    log_skip "chcon not available — skipping SELinux context step"
+fi
+
+# =============================================================================
+# STEP 4 — JupyterHub directory & config
+# =============================================================================
+log "=== STEP 4: JupyterHub config ==="
 
 mkdir -p "$JUPYTERHUB_DIR"
 
@@ -140,9 +154,9 @@ PYEOF
 fi
 
 # =============================================================================
-# STEP 4 — Systemd service
+# STEP 5 — Systemd service
 # =============================================================================
-log "=== STEP 4: systemd service ==="
+log "=== STEP 5: systemd service ==="
 
 if [[ -f "$SERVICE_FILE" ]]; then
     log_skip "Service file already exists at $SERVICE_FILE"
@@ -179,9 +193,9 @@ EOF
 fi
 
 # =============================================================================
-# STEP 5 — Register kernels for all AIStack conda envs
+# STEP 6 — Register kernels for all AIStack conda envs
 # =============================================================================
-log "=== STEP 5: Kernel registration ==="
+log "=== STEP 6: Kernel registration ==="
 
 while IFS= read -r line; do
     [[ "$line" =~ ^# || "$line" =~ ^base || -z "$line" ]] && continue
