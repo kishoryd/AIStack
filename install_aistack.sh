@@ -1,62 +1,35 @@
 #!/bin/bash
-# =============================================================================
-# AIStack Environment Installer
-# =============================================================================
-# Usage:
-#   git clone https://github.com/YOUR_ORG/AIStack.git /home/apps/AIStack
-#   cd /home/apps/AIStack
-#   bash install_aistack.sh
-#
-# IDEMPOTENT — safe to re-run at any time:
-#   - Miniconda : skipped if already installed
-#   - conda env : skipped entirely if env directory already exists
-#   - pip pkgs  : skipped per-package if already importable
-#   - kernel    : skipped if already registered
-#   - base reqs : skipped if sentinel file exists
-# =============================================================================
-
 set -o pipefail
 
-# ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
-
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
-
-
 LOG_DIR="/home/apps/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
-DONE_DIR="/home/apps/.done"   # sentinel files live here
+DONE_DIR="/home/apps/.done"
 
 mkdir -p "$LOG_DIR" "$DONE_DIR"
-# append to summary log across restarts — do NOT truncate with >
+
 log()     { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$SUMMARY_LOG"; }
 log_ok()  { echo "  ✔ $*" | tee -a "$SUMMARY_LOG"; }
 log_skip(){ echo "  ⊘ $*" | tee -a "$SUMMARY_LOG"; }
 log_err() { echo "  ✘ $*" | tee -a "$SUMMARY_LOG"; }
 
-# ─── SENTINEL HELPERS ────────────────────────────────────────────────────────
-# mark ENV as fully done
-mark_done()   { touch "$DONE_DIR/$1.done"; }
-# true if ENV was previously completed
-is_done()     { [[ -f "$DONE_DIR/$1.done" ]]; }
-# true if conda env directory exists
-env_exists()  { [[ -d "$CONDA_DIR/envs/$1" ]]; }
-# true if a package is importable inside an env
+mark_done()  { touch "$DONE_DIR/$1.done"; }
+is_done()    { [[ -f "$DONE_DIR/$1.done" ]]; }
+env_exists() { [[ -d "$CONDA_DIR/envs/$1" ]]; }
+
 pkg_installed() {
     local env="$1" pkg="$2"
-    # strip install flags (e.g. --no-build-isolation) to get just the module name
     local mod
     mod=$(echo "$pkg" | sed 's/\[.*\]//' | sed 's/-/_/g' | awk '{print $1}')
     "$CONDA_DIR/envs/$env/bin/python" -c "import $mod" &>/dev/null
 }
 
-# ─── ERRORS ──────────────────────────────────────────────────────────────────
 declare -A ENV_ERRORS
 declare -A ENV_SKIPPED
 
-# ─── PIP INSTALL (idempotent per-package) ────────────────────────────────────
 pip_install() {
     local env="$1"; shift
     local failed=()
@@ -108,15 +81,8 @@ conda_install() {
         || { log_err "$* FAILED"; ENV_ERRORS[$env]="${ENV_ERRORS[$env]} $*"; }
 }
 
-# ─── CONDA CREATE (idempotent) ───────────────────────────────────────────────
-# Returns:
-#   0  → env was just created (proceed with installs)
-#   1  → env already existed AND is marked done (skip all installs)
-#   2  → env already existed but NOT marked done (proceed with installs to resume)
-#   3  → creation failed
 conda_create() {
     local env="$1"; local pyver="$2"
-
     if env_exists "$env"; then
         if is_done "$env"; then
             log_skip "env '$env' already complete — skipping"
@@ -127,7 +93,6 @@ conda_create() {
             return 2
         fi
     fi
-
     log "Creating conda env '$env' (python=$pyver)..."
     "$CONDA_DIR/bin/conda" create -n "$env" python="$pyver" -y \
         >> "$LOG_DIR/${env}.log" 2>&1 \
@@ -135,7 +100,6 @@ conda_create() {
         || { log_err "Failed to create env '$env'"; ENV_ERRORS[$env]="ENV_CREATION_FAILED"; return 3; }
 }
 
-# ─── KERNEL REGISTER (idempotent) ────────────────────────────────────────────
 register_kernel() {
     local env="$1"; local display="$2"
     if jupyter kernelspec list 2>/dev/null | grep -qi "^${env}[[:space:]]"; then
@@ -154,23 +118,18 @@ register_kernel() {
         || log_err "Kernel registration failed for '$env'"
 }
 
-# ─── INSTALL ENV WRAPPER ─────────────────────────────────────────────────────
-# Usage: begin_env ENV PYVER && { installs... ; mark_done ENV; }
-# Handles the 3-state return from conda_create cleanly
 begin_env() {
     local env="$1"; local pyver="$2"
     conda_create "$env" "$pyver"
     local rc=$?
-    [[ $rc -eq 1 ]] && return 1   # fully done, caller skips block
-    [[ $rc -eq 3 ]] && return 1   # creation failed, caller skips block
-    return 0                       # rc 0 or 2 → proceed
+    [[ $rc -eq 1 || $rc -eq 3 ]] && return 1
+    return 0
 }
 
 # =============================================================================
 # STEP 1 — MINICONDA
 # =============================================================================
 log "=== AIStack Installer — $(date) ==="
-log "Repo : $AISTACK_DIR"
 
 if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
     log "Downloading Miniconda..."
@@ -187,7 +146,6 @@ source "$CONDA_DIR/bin/activate"
 export CONDA_TOS_ACCEPTED=true
 conda tos accept 2>/dev/null || true
 log_ok "Conda ready"
-
 
 # =============================================================================
 # FINETUNING
@@ -444,8 +402,8 @@ echo ""
 "$CONDA_DIR/bin/conda" env list
 echo ""
 if [[ $FAILED_COUNT -eq 0 ]]; then
-    echo "  🎉 All done!"
+    echo "  All done!"
 else
-    echo "  ⚠  $FAILED_COUNT env(s) had failures. Re-run to retry only those."
+    echo "  $FAILED_COUNT env(s) had failures. Re-run to retry only those."
 fi
 echo "════════════════════════════════════════════════════════════"
