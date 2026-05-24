@@ -86,16 +86,15 @@ check_cuda() {
 import torch
 avail = torch.cuda.is_available()
 count = torch.cuda.device_count() if avail else 0
-name  = torch.cuda.get_device_name(0) if avail else "N/A"
-print(f"available={avail} count={count} device={name}")
+names = " | ".join(torch.cuda.get_device_name(i) for i in range(count)) if avail else "N/A"
+print(f"available={avail} count={count} devices={names}")
 EOF
 )
-    echo "$result" >> "$LOG_DIR/${env}.log"
     if echo "$result" | grep -q "available=True"; then
-        local count name
+        local count names
         count=$(echo "$result" | grep -oP 'count=\K[0-9]+')
-        name=$(echo "$result"  | grep -oP 'device=\K.*')
-        log_pass "CUDA OK — $count GPU(s): $name"
+        names=$(echo "$result" | grep -oP 'devices=\K.*')
+        log_pass "CUDA OK — $count GPU(s): $names"
         return 0
     else
         log_fail "CUDA NOT available (torch.cuda.is_available() = False)"
