@@ -102,7 +102,7 @@ conda_create() {
 
 register_kernel() {
     local env="$1"; local display="$2"
-    if jupyter kernelspec list 2>/dev/null | grep -qi "^${env}[[:space:]]"; then
+    if [[ -d "$CONDA_DIR/envs/$env/share/jupyter/kernels/$env" ]]; then
         log_skip "kernel '$env' already registered"
         return 0
     fi

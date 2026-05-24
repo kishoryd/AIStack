@@ -105,11 +105,11 @@ EOF
 
 check_kernel() {
     local env="$1"
-    if jupyter kernelspec list 2>/dev/null | grep -qi "^${env}[[:space:]]"; then
+    if [[ -d "$CONDA_DIR/envs/$env/share/jupyter/kernels/$env" ]]; then
         log_pass "JupyterHub kernel registered"
         return 0
     else
-        log_warn "Kernel not found for '$env' (jupyter may not be on PATH)"
+        log_warn "Kernel not registered for '$env'"
         return 1
     fi
 }
@@ -184,14 +184,14 @@ log "=== AIStack Test Suite — $(date) ==="
 [[ $FORCE -eq 1 ]] && log "  --force: re-testing all environments"
 
 section "FINETUNING"
-run_env_test unsloth      3.11 "torch torchvision torchaudio unsloth triton jupyter jupyterlab ipykernel"   "Unsloth"
+run_env_test unsloth      3.11 "torch torchvision unsloth triton jupyter jupyterlab ipykernel"            "Unsloth"
 run_env_test transformers 3.11 "torch torchvision torchaudio transformers jupyter jupyterlab ipykernel"     "Transformers"
 run_env_test accelerate   3.11 "torch torchvision torchaudio accelerate jupyter jupyterlab ipykernel"       "Accelerate"
 run_env_test trl          3.11 "torch torchvision torchaudio trl jupyter jupyterlab ipykernel"              "TRL"
-run_env_test axolotl      3.11 "torch torchaudio axolotl jupyter jupyterlab ipykernel"                    "Axolotl"
+run_env_test axolotl      3.11 "torch axolotl jupyter jupyterlab ipykernel"                              "Axolotl"
 run_env_test llamafactory 3.11 "torch torchvision torchaudio llamafactory jupyter jupyterlab ipykernel"     "LLaMA-Factory"
 run_env_test torchtune    3.11 "torch torchvision torchaudio torchtune jupyter jupyterlab ipykernel"        "TorchTune"
-run_env_test deepspeed    3.11 "torch torchvision torchaudio deepspeed jupyter jupyterlab ipykernel"        "DeepSpeed"
+run_env_test deepspeed    3.11 "torch torchvision torchaudio jupyter jupyterlab ipykernel"                 "DeepSpeed"
 
 section "INFERENCE"
 run_env_test vllm         3.11 "torch vllm jupyter jupyterlab ipykernel"                                    "vLLM"
