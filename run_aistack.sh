@@ -43,8 +43,8 @@ else
     echo "  ✔ $APPS_DIR created and owned by '$ADMIN_USER'"
 fi
 
-# Give admin read access to the AIStack repo dir
-chmod o+rx "$AISTACK_DIR"
+# Give admin ownership of the cloned repo so it can write logs inside it
+chown -R "${ADMIN_USER}:${ADMIN_USER}" "$AISTACK_DIR"
 
 # =============================================================================
 # STEP 3 — Install as admin
