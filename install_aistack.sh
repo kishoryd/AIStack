@@ -147,6 +147,11 @@ export CONDA_TOS_ACCEPTED=true
 conda tos accept 2>/dev/null || true
 log_ok "Conda ready"
 
+log "Installing python and pip in base env..."
+"$CONDA_DIR/bin/conda" install -y python pip &>/dev/null \
+    && log_ok "python and pip installed in base env" \
+    || log_err "Failed to install python/pip in base env"
+
 # =============================================================================
 # FINETUNING
 # =============================================================================

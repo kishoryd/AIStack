@@ -108,9 +108,42 @@ else
 fi
 
 # =============================================================================
-# STEP 5 — Remove registered kernels from all conda envs
+# STEP 5 — Uninstall configurable-http-proxy (npm global)
 # =============================================================================
-log "=== STEP 5: Kernel cleanup ==="
+log "=== STEP 5: configurable-http-proxy ==="
+
+if command -v npm &>/dev/null; then
+    if npm list -g --depth=0 configurable-http-proxy &>/dev/null 2>&1; then
+        npm uninstall -g configurable-http-proxy \
+            >> "$LOG_DIR/jupyterhub_uninstall.log" 2>&1 \
+            && log_ok "configurable-http-proxy uninstalled" \
+            || log_err "Failed to uninstall configurable-http-proxy"
+    else
+        log_skip "configurable-http-proxy not installed globally"
+    fi
+else
+    log_skip "npm not found — skipping configurable-http-proxy removal"
+fi
+
+# =============================================================================
+# STEP 6 — Uninstall Node.js
+# =============================================================================
+log "=== STEP 6: Node.js ==="
+
+if command -v dnf &>/dev/null && dnf list installed nodejs &>/dev/null 2>&1; then
+    dnf remove -y nodejs >> "$LOG_DIR/jupyterhub_uninstall.log" 2>&1 \
+        && log_ok "Node.js removed via dnf" \
+        || log_err "Failed to remove Node.js via dnf"
+elif command -v node &>/dev/null; then
+    log_skip "Node.js found but not installed via dnf — remove manually"
+else
+    log_skip "Node.js not installed"
+fi
+
+# =============================================================================
+# STEP 7 — Remove registered kernels from all conda envs
+# =============================================================================
+log "=== STEP 7: Kernel cleanup ==="
 
 if [[ -f "$CONDA_DIR/bin/conda" ]]; then
     while IFS= read -r line; do
