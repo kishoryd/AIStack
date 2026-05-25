@@ -19,7 +19,7 @@ AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPACK_DIR="/home/apps/spack"
 SPACK_ENV_SCRIPT="$SPACK_DIR/share/spack/setup-env.sh"
 SPACK_GITHUB="https://github.com/spack/spack.git"
-BUILD_JOBS=10
+BUILD_JOBS=40
 LOG_DIR="$AISTACK_DIR/logs"
 SPACK_LOG="$LOG_DIR/spack_install.log"
 
@@ -96,8 +96,8 @@ log "=== STEP 4: Installing CUDA 13.0 (jobs=$BUILD_JOBS) ==="
 if spack find cuda@13.0 &>/dev/null 2>&1; then
     log_skip "CUDA 13.0 already installed in Spack"
 else
-    log "Running: spack install -j $BUILD_JOBS cuda@13.0"
-    if spack install -j "$BUILD_JOBS" cuda@13.0 2>&1 | tee -a "$SPACK_LOG"; then
+    log "Running: spack install -j$BUILD_JOBS cuda@13.0"
+    if spack install -j$BUILD_JOBS cuda@13.0 2>&1 | tee -a "$SPACK_LOG"; then
         log_pass "CUDA 13.0 installed"
     else
         die "CUDA 13.0 installation failed — check $SPACK_LOG"

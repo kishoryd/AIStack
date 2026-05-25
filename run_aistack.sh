@@ -83,6 +83,16 @@ bash "$AISTACK_DIR/create_modulefiles.sh"
 MOD_EXIT=$?
 
 # =============================================================================
+# STEP 6 — Install JupyterHub as root
+# =============================================================================
+echo ""
+echo ">>> Installing JupyterHub as root..."
+echo ""
+
+bash "$AISTACK_DIR/install_jupyterhub.sh"
+JH_EXIT=$?
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 echo ""
@@ -90,9 +100,10 @@ echo "════════════════════════�
 echo "                       SUMMARY"
 echo "════════════════════════════════════════════════════════════"
 echo "  Install      : $([ $INSTALL_EXIT -eq 0 ] && echo PASS || echo FAIL)"
-echo "  Tests        : $([ $TEST_EXIT   -eq 0 ] && echo PASS || echo FAIL)"
-echo "  Modulefiles  : $([ $MOD_EXIT    -eq 0 ] && echo PASS || echo FAIL)"
+echo "  Tests        : $([ $TEST_EXIT    -eq 0 ] && echo PASS || echo FAIL)"
+echo "  Modulefiles  : $([ $MOD_EXIT     -eq 0 ] && echo PASS || echo FAIL)"
+echo "  JupyterHub   : $([ $JH_EXIT      -eq 0 ] && echo PASS || echo FAIL)"
 echo "════════════════════════════════════════════════════════════"
 
-[[ $INSTALL_EXIT -ne 0 || $TEST_EXIT -ne 0 || $MOD_EXIT -ne 0 ]] && exit 1
+[[ $INSTALL_EXIT -ne 0 || $TEST_EXIT -ne 0 || $MOD_EXIT -ne 0 || $JH_EXIT -ne 0 ]] && exit 1
 exit 0
