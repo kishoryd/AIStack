@@ -172,7 +172,7 @@ begin_env unsloth 3.11 && {
 log "=== FINETUNING: transformers ==="
 begin_env transformers 3.11 && {
     pip_install_with_index transformers "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install transformers "transformers"
+    pip_install transformers "transformers" "mlflow"
     register_kernel transformers "Transformers (Python 3.11)"
     [[ -z "${ENV_ERRORS[transformers]}" ]] && mark_done transformers
 }
@@ -180,7 +180,7 @@ begin_env transformers 3.11 && {
 log "=== FINETUNING: accelerate ==="
 begin_env accelerate 3.11 && {
     pip_install_with_index accelerate "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install accelerate "accelerate"
+    pip_install accelerate "accelerate" "mlflow"
     register_kernel accelerate "Accelerate (Python 3.11)"
     [[ -z "${ENV_ERRORS[accelerate]}" ]] && mark_done accelerate
 }
@@ -188,7 +188,7 @@ begin_env accelerate 3.11 && {
 log "=== FINETUNING: trl ==="
 begin_env trl 3.11 && {
     pip_install_with_index trl "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install trl "trl"
+    pip_install trl "trl" "mlflow"
     register_kernel trl "TRL (Python 3.11)"
     [[ -z "${ENV_ERRORS[trl]}" ]] && mark_done trl
 }
@@ -196,7 +196,7 @@ begin_env trl 3.11 && {
 log "=== FINETUNING: axolotl ==="
 begin_env axolotl 3.11 && {
     pip_install_with_index axolotl "$TORCH_CU128" "torch" "torchaudio"
-    pip_install axolotl "ninja" "packaging" "axolotl[deepspeed]"
+    pip_install axolotl "ninja" "packaging" "axolotl[deepspeed]" "mlflow"
     register_kernel axolotl "Axolotl (Python 3.11)"
     [[ -z "${ENV_ERRORS[axolotl]}" ]] && mark_done axolotl
 }
@@ -204,7 +204,7 @@ begin_env axolotl 3.11 && {
 log "=== FINETUNING: llamafactory ==="
 begin_env llamafactory 3.11 && {
     pip_install_with_index llamafactory "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install llamafactory "ninja" "llamafactory[metrics]"
+    pip_install llamafactory "ninja" "llamafactory[metrics]" "mlflow"
     register_kernel llamafactory "LLaMA-Factory (Python 3.11)"
     [[ -z "${ENV_ERRORS[llamafactory]}" ]] && mark_done llamafactory
 }
@@ -212,7 +212,7 @@ begin_env llamafactory 3.11 && {
 log "=== FINETUNING: torchtune ==="
 begin_env torchtune 3.11 && {
     pip_install_with_index torchtune "$TORCH_CU128" "torch" "torchvision" "torchaudio" "torchao"
-    pip_install torchtune "torchtune"
+    pip_install torchtune "torchtune" "mlflow"
     register_kernel torchtune "TorchTune (Python 3.11)"
     [[ -z "${ENV_ERRORS[torchtune]}" ]] && mark_done torchtune
 }
