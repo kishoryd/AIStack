@@ -359,9 +359,10 @@ begin_env tensorflow 3.10 && {
 }
 
 log "=== LEGACY: Theano ==="
-begin_env Theano 3.10 && {
-    conda_install Theano -c conda-forge theano pygpu
-    register_kernel Theano "Theano (Python 3.10)"
+begin_env Theano 3.8 && {
+    conda_install Theano -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
+    conda_install Theano mkl-service
+    register_kernel Theano "Theano (Python 3.8)"
     [[ -z "${ENV_ERRORS[Theano]}" ]] && mark_done Theano
 }
 

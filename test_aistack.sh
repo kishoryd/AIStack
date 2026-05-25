@@ -207,7 +207,7 @@ run_env_test haystack     3.11 "torch haystack chromadb qdrant_client sentence_t
 section "LEGACY"
 run_env_test pytorch  3.10 "torch torchvision jupyter jupyterlab ipykernel"  "PyTorch"
 run_env_test tensorflow   3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
-run_env_test Theano       3.10 "theano pygpu jupyter jupyterlab ipykernel"        "Theano"
+run_env_test Theano       3.8  "theano pygpu jupyter jupyterlab ipykernel"        "Theano"
 run_env_test Caffe        3.7  "caffe jupyter jupyterlab ipykernel"               "Caffe"
 run_env_test rapids       3.7  "cudf jupyter jupyterlab ipykernel"                "Rapids"
 
