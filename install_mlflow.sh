@@ -162,35 +162,32 @@ fi
 log "=== STEP 5: nginx CORS reverse proxy ==="
 
 if [[ -f "$NGINX_CONF" ]]; then
-    log_skip "nginx MLflow config already exists at $NGINX_CONF — reusing"
-else
-    log "Writing nginx CORS config for MLflow..."
-    cat > "$NGINX_CONF" << EOF
+    log "Overwriting existing nginx config at $NGINX_CONF..."
+fi
+
+log "Writing nginx CORS config for MLflow..."
+cat > "$NGINX_CONF" << EOF
 server {
     listen $MLFLOW_PUBLIC_PORT;
     server_name _;
 
-    # ── CORS headers ──────────────────────────────────────────────────────────
-    set \$cors_origin "\$http_origin";
-
-    add_header 'Access-Control-Allow-Origin'      "\$cors_origin" always;
-    add_header 'Access-Control-Allow-Credentials' 'true'          always;
-    add_header 'Access-Control-Allow-Methods'     'GET, POST, PUT, DELETE, OPTIONS, PATCH' always;
-    add_header 'Access-Control-Allow-Headers'     'Authorization, Content-Type, Accept, Origin, X-Requested-With' always;
-
-    # Handle preflight OPTIONS requests
-    if (\$request_method = OPTIONS) {
-        add_header 'Access-Control-Allow-Origin'      "\$cors_origin";
-        add_header 'Access-Control-Allow-Credentials' 'true';
-        add_header 'Access-Control-Allow-Methods'     'GET, POST, PUT, DELETE, OPTIONS, PATCH';
-        add_header 'Access-Control-Allow-Headers'     'Authorization, Content-Type, Accept, Origin, X-Requested-With';
-        add_header 'Access-Control-Max-Age'           86400;
-        add_header 'Content-Length' 0;
-        return 204;
-    }
-
-    # ── Proxy to MLflow ───────────────────────────────────────────────────────
     location / {
+        # ── Preflight OPTIONS ─────────────────────────────────────────────────
+        if (\$request_method = OPTIONS) {
+            add_header 'Access-Control-Allow-Origin'  '*';
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
+            add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, Accept, Origin, X-Requested-With';
+            add_header 'Access-Control-Max-Age'       86400;
+            add_header 'Content-Length'               0;
+            return 204;
+        }
+
+        # ── CORS headers for all other requests ───────────────────────────────
+        add_header 'Access-Control-Allow-Origin'  '*'                                                          always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS, PATCH'                    always;
+        add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, Accept, Origin, X-Requested-With' always;
+
+        # ── Proxy to MLflow ───────────────────────────────────────────────────
         proxy_pass         http://127.0.0.1:$MLFLOW_INTERNAL_PORT;
         proxy_set_header   Host              \$host;
         proxy_set_header   X-Real-IP         \$remote_addr;
@@ -201,8 +198,7 @@ server {
     }
 }
 EOF
-    log_ok "nginx CORS config written to $NGINX_CONF"
-fi
+log_ok "nginx CORS config written to $NGINX_CONF"
 
 # Test config regardless of whether it was just written or already existed
 log "Testing nginx config..."
