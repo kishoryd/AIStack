@@ -214,6 +214,37 @@ systemctl enable nginx >> "$MLFLOW_LOG" 2>&1 \
     && log_ok "nginx service enabled" \
     || log_err "Failed to enable nginx"
 
+# ── SELinux: allow nginx to bind to non-standard port ────────────────────────
+if command -v getenforce &>/dev/null && [[ "$(getenforce)" != "Disabled" ]]; then
+    log "SELinux active — checking port $MLFLOW_PUBLIC_PORT label..."
+    if command -v semanage &>/dev/null; then
+        if semanage port -l 2>/dev/null | grep -q "^http_port_t.*${MLFLOW_PUBLIC_PORT}"; then
+            log_skip "Port $MLFLOW_PUBLIC_PORT already labelled http_port_t"
+        else
+            log "Labelling port $MLFLOW_PUBLIC_PORT as http_port_t for SELinux..."
+            semanage port -a -t http_port_t -p tcp "$MLFLOW_PUBLIC_PORT" >> "$MLFLOW_LOG" 2>&1 \
+                && log_ok "SELinux port label added for $MLFLOW_PUBLIC_PORT" \
+                || {
+                    # Port might already exist under a different type — modify instead
+                    semanage port -m -t http_port_t -p tcp "$MLFLOW_PUBLIC_PORT" >> "$MLFLOW_LOG" 2>&1 \
+                        && log_ok "SELinux port label updated for $MLFLOW_PUBLIC_PORT" \
+                        || log_err "semanage failed — install policycoreutils-python-utils and retry"
+                }
+        fi
+    else
+        log_err "semanage not found — install policycoreutils-python-utils to fix SELinux port binding"
+        log_err "  dnf install -y policycoreutils-python-utils"
+        log_err "  semanage port -a -t http_port_t -p tcp $MLFLOW_PUBLIC_PORT"
+    fi
+fi
+
+# ── Check port is free before starting ───────────────────────────────────────
+if ss -tlnp 2>/dev/null | grep -q ":${MLFLOW_PUBLIC_PORT} "; then
+    log_err "Port $MLFLOW_PUBLIC_PORT is already in use:"
+    ss -tlnp | grep ":${MLFLOW_PUBLIC_PORT} " | tee -a "$MLFLOW_LOG"
+    die "Free port $MLFLOW_PUBLIC_PORT before starting nginx"
+fi
+
 if systemctl is-active --quiet nginx; then
     log "Reloading nginx to pick up config..."
     systemctl reload nginx >> "$MLFLOW_LOG" 2>&1 \
@@ -223,7 +254,12 @@ else
     log "nginx not running — starting..."
     systemctl start nginx >> "$MLFLOW_LOG" 2>&1 \
         && log_ok "nginx started" \
-        || { log_err "nginx failed to start — showing error:"; journalctl -u nginx -n 20 --no-pager; die "nginx start failed"; }
+        || {
+            log_err "nginx failed to start — diagnostic output:"
+            journalctl -u nginx -n 30 --no-pager | tee -a "$MLFLOW_LOG"
+            grep nginx /var/log/audit/audit.log 2>/dev/null | tail -10 | tee -a "$MLFLOW_LOG"
+            die "nginx start failed — see above for details"
+        }
 fi
 
 # Open firewall port if firewalld is active
