@@ -217,14 +217,6 @@ begin_env torchtune 3.11 && {
     [[ -z "${ENV_ERRORS[torchtune]}" ]] && mark_done torchtune
 }
 
-log "=== FINETUNING: deepspeed ==="
-begin_env deepspeed 3.11 && {
-    pip_install_with_index deepspeed "$TORCH_CU130" "torch" "torchvision" "torchaudio"
-    pip_install deepspeed "deepspeed"
-    register_kernel deepspeed "DeepSpeed (Python 3.11)"
-    [[ -z "${ENV_ERRORS[deepspeed]}" ]] && mark_done deepspeed
-}
-
 # =============================================================================
 # INFERENCE
 # =============================================================================
@@ -389,7 +381,7 @@ begin_env rapids 3.7 && {
 # SUMMARY
 # =============================================================================
 ALL_ENVS=(
-    unsloth transformers accelerate trl axolotl llamafactory torchtune deepspeed
+    unsloth transformers accelerate trl axolotl llamafactory torchtune
     vllm sglang lmdeploy rayserve tgi
     llamaindex langchain haystack
     pytorch tensorflow Theano Caffe rapids

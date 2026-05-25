@@ -190,7 +190,6 @@ run_env_test trl          3.11 "torch torchvision torchaudio trl jupyter jupyter
 run_env_test axolotl      3.11 "torch axolotl jupyter jupyterlab ipykernel"                              "Axolotl"
 run_env_test llamafactory 3.11 "torch torchvision torchaudio llamafactory jupyter jupyterlab ipykernel"     "LLaMA-Factory"
 run_env_test torchtune    3.11 "torch torchvision torchaudio torchtune jupyter jupyterlab ipykernel"        "TorchTune"
-run_env_test deepspeed    3.11 "torch torchvision torchaudio jupyter jupyterlab ipykernel"                 "DeepSpeed"
 
 section "INFERENCE"
 run_env_test vllm         3.11 "torch vllm jupyter jupyterlab ipykernel"                                    "vLLM"
@@ -215,7 +214,7 @@ run_env_test rapids       3.7  "cudf jupyter jupyterlab ipykernel"              
 # FINAL REPORT
 # =============================================================================
 ALL_ENVS=(
-    unsloth transformers accelerate trl axolotl llamafactory torchtune deepspeed
+    unsloth transformers accelerate trl axolotl llamafactory torchtune
     vllm sglang lmdeploy rayserve tgi
     llamaindex langchain haystack
     pytorch tensorflow Theano Caffe rapids
