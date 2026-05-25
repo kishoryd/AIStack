@@ -9,8 +9,8 @@
 # IDEMPOTENT — safe to re-run:
 #   - MLflow pip install   : skipped if already installed
 #   - Data directory       : skipped if already exists
-#   - Config file          : skipped if already exists
 #   - Systemd service      : skipped if already exists
+#   - nginx CORS proxy     : skipped if already configured
 # =============================================================================
 
 set -o pipefail
@@ -19,11 +19,12 @@ set -o pipefail
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
 MLFLOW_DIR="/home/apps/mlflow"
-MLFLOW_PORT=5000
-MLFLOW_HOST="0.0.0.0"
+MLFLOW_INTERNAL_PORT=5001          # MLflow listens here (localhost only)
+MLFLOW_PUBLIC_PORT=5000            # nginx exposes this to the network
 MLFLOW_BACKEND="sqlite:///$MLFLOW_DIR/mlflow.db"
 MLFLOW_ARTIFACTS="$MLFLOW_DIR/artifacts"
 SERVICE_FILE="/etc/systemd/system/mlflow.service"
+NGINX_CONF="/etc/nginx/conf.d/mlflow.conf"
 
 LOG_DIR="$AISTACK_DIR/logs"
 MLFLOW_LOG="$LOG_DIR/mlflow_install.log"
@@ -41,12 +42,13 @@ log_err()  { echo -e "  ${RED}✘${NC} $*" | tee -a "$MLFLOW_LOG"; }
 die()      { echo -e "${RED}ERROR: $*${NC}" | tee -a "$MLFLOW_LOG"; exit 1; }
 
 log "=== AIStack MLflow Server Installer — $(date) ==="
-log "AIStack dir   : $AISTACK_DIR"
-log "Conda dir     : $CONDA_DIR"
-log "MLflow dir    : $MLFLOW_DIR"
-log "Port          : $MLFLOW_PORT"
-log "Backend store : $MLFLOW_BACKEND"
-log "Artifact store: $MLFLOW_ARTIFACTS"
+log "AIStack dir      : $AISTACK_DIR"
+log "Conda dir        : $CONDA_DIR"
+log "MLflow dir       : $MLFLOW_DIR"
+log "Internal port    : $MLFLOW_INTERNAL_PORT"
+log "Public port      : $MLFLOW_PUBLIC_PORT (nginx + CORS)"
+log "Backend store    : $MLFLOW_BACKEND"
+log "Artifact store   : $MLFLOW_ARTIFACTS"
 
 # ─── PREFLIGHT ───────────────────────────────────────────────────────────────
 if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
@@ -90,7 +92,7 @@ fi
 mkdir -p "$MLFLOW_ARTIFACTS"
 
 # =============================================================================
-# STEP 3 — Systemd service
+# STEP 3 — Systemd service (MLflow on localhost only)
 # =============================================================================
 log "=== STEP 3: systemd service ==="
 
@@ -108,8 +110,8 @@ User=root
 Group=root
 WorkingDirectory=$MLFLOW_DIR
 ExecStart=$MLFLOW_BIN server \
-    --host $MLFLOW_HOST \
-    --port $MLFLOW_PORT \
+    --host 127.0.0.1 \
+    --port $MLFLOW_INTERNAL_PORT \
     --backend-store-uri $MLFLOW_BACKEND \
     --default-artifact-root $MLFLOW_ARTIFACTS
 Environment="PATH=$CONDA_DIR/bin:/usr/local/bin:/usr/bin:/bin"
@@ -133,21 +135,107 @@ EOF
 fi
 
 # =============================================================================
-# STEP 4 — Verify server is up
+# STEP 4 — Install nginx
 # =============================================================================
-log "=== STEP 4: Verifying MLflow server ==="
+log "=== STEP 4: Installing nginx ==="
 
-sleep 3
-if curl -sf "http://localhost:$MLFLOW_PORT/health" &>/dev/null; then
-    log_ok "MLflow server responding on port $MLFLOW_PORT"
+if command -v nginx &>/dev/null; then
+    log_skip "nginx already installed ($(nginx -v 2>&1 | awk -F/ '{print $2}'))"
 else
-    log_err "MLflow server not responding — check: journalctl -u mlflow -f"
+    log "Installing nginx via dnf..."
+    if command -v dnf &>/dev/null; then
+        dnf install -y nginx >> "$MLFLOW_LOG" 2>&1 \
+            && log_ok "nginx installed" \
+            || die "nginx installation failed — check $MLFLOW_LOG"
+    elif command -v apt-get &>/dev/null; then
+        apt-get install -y nginx >> "$MLFLOW_LOG" 2>&1 \
+            && log_ok "nginx installed" \
+            || die "nginx installation failed — check $MLFLOW_LOG"
+    else
+        die "No supported package manager found. Install nginx manually."
+    fi
 fi
 
 # =============================================================================
-# STEP 5 — Write MLFLOW_TRACKING_URI to /etc/profile.d
+# STEP 5 — nginx CORS reverse proxy config
 # =============================================================================
-log "=== STEP 5: Exporting MLFLOW_TRACKING_URI system-wide ==="
+log "=== STEP 5: nginx CORS reverse proxy ==="
+
+if [[ -f "$NGINX_CONF" ]]; then
+    log_skip "nginx MLflow config already exists at $NGINX_CONF"
+else
+    log "Writing nginx CORS config for MLflow..."
+    cat > "$NGINX_CONF" << EOF
+server {
+    listen $MLFLOW_PUBLIC_PORT;
+    server_name _;
+
+    # ── CORS headers ──────────────────────────────────────────────────────────
+    set \$cors_origin "\$http_origin";
+
+    add_header 'Access-Control-Allow-Origin'      "\$cors_origin" always;
+    add_header 'Access-Control-Allow-Credentials' 'true'          always;
+    add_header 'Access-Control-Allow-Methods'     'GET, POST, PUT, DELETE, OPTIONS, PATCH' always;
+    add_header 'Access-Control-Allow-Headers'     'Authorization, Content-Type, Accept, Origin, X-Requested-With' always;
+
+    # Handle preflight OPTIONS requests
+    if (\$request_method = OPTIONS) {
+        add_header 'Access-Control-Allow-Origin'      "\$cors_origin";
+        add_header 'Access-Control-Allow-Credentials' 'true';
+        add_header 'Access-Control-Allow-Methods'     'GET, POST, PUT, DELETE, OPTIONS, PATCH';
+        add_header 'Access-Control-Allow-Headers'     'Authorization, Content-Type, Accept, Origin, X-Requested-With';
+        add_header 'Access-Control-Max-Age'           86400;
+        add_header 'Content-Length' 0;
+        return 204;
+    }
+
+    # ── Proxy to MLflow ───────────────────────────────────────────────────────
+    location / {
+        proxy_pass         http://127.0.0.1:$MLFLOW_INTERNAL_PORT;
+        proxy_set_header   Host              \$host;
+        proxy_set_header   X-Real-IP         \$remote_addr;
+        proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300;
+        proxy_buffering    off;
+    }
+}
+EOF
+    log_ok "nginx CORS config written to $NGINX_CONF"
+
+    # Test nginx config
+    if nginx -t >> "$MLFLOW_LOG" 2>&1; then
+        log_ok "nginx config test passed"
+    else
+        log_err "nginx config test failed — check $MLFLOW_LOG"
+    fi
+
+    systemctl enable nginx >> "$MLFLOW_LOG" 2>&1 \
+        && log_ok "nginx service enabled" \
+        || log_err "Failed to enable nginx"
+
+    systemctl restart nginx >> "$MLFLOW_LOG" 2>&1 \
+        && log_ok "nginx restarted" \
+        || log_err "Failed to restart nginx — check: journalctl -u nginx -f"
+fi
+
+# =============================================================================
+# STEP 6 — Verify server is up through nginx
+# =============================================================================
+log "=== STEP 6: Verifying MLflow via nginx ==="
+
+sleep 3
+
+if curl -sf "http://localhost:$MLFLOW_PUBLIC_PORT/health" &>/dev/null; then
+    log_ok "MLflow responding on port $MLFLOW_PUBLIC_PORT (via nginx)"
+else
+    log_err "MLflow not responding on port $MLFLOW_PUBLIC_PORT — check nginx and mlflow service"
+fi
+
+# =============================================================================
+# STEP 7 — Write MLFLOW_TRACKING_URI to /etc/profile.d
+# =============================================================================
+log "=== STEP 7: Exporting MLFLOW_TRACKING_URI system-wide ==="
 
 PROFILE_SCRIPT="/etc/profile.d/mlflow.sh"
 HOST_IP=$(hostname -I | awk '{print $1}')
@@ -157,10 +245,10 @@ if [[ -f "$PROFILE_SCRIPT" ]]; then
 else
     cat > "$PROFILE_SCRIPT" << EOF
 # MLflow tracking server — auto-generated by AIStack install_mlflow.sh
-export MLFLOW_TRACKING_URI=http://${HOST_IP}:${MLFLOW_PORT}
+export MLFLOW_TRACKING_URI=http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}
 EOF
     log_ok "Written: $PROFILE_SCRIPT"
-    log_ok "MLFLOW_TRACKING_URI=http://${HOST_IP}:${MLFLOW_PORT}"
+    log_ok "MLFLOW_TRACKING_URI=http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}"
 fi
 
 # =============================================================================
@@ -171,17 +259,20 @@ echo -e "${BOLD}═════════════════════�
 echo -e "${BOLD}              MLflow Server Installation Complete${NC}" | tee -a "$MLFLOW_LOG"
 echo -e "${BOLD}════════════════════════════════════════════════════════════${NC}" | tee -a "$MLFLOW_LOG"
 echo "" | tee -a "$MLFLOW_LOG"
-echo    "  UI URL        : http://${HOST_IP}:${MLFLOW_PORT}" | tee -a "$MLFLOW_LOG"
-echo    "  Tracking URI  : http://${HOST_IP}:${MLFLOW_PORT}" | tee -a "$MLFLOW_LOG"
+echo    "  UI URL        : http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}  (nginx + CORS)" | tee -a "$MLFLOW_LOG"
+echo    "  Tracking URI  : http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}" | tee -a "$MLFLOW_LOG"
 echo    "  Backend store : $MLFLOW_BACKEND" | tee -a "$MLFLOW_LOG"
 echo    "  Artifacts     : $MLFLOW_ARTIFACTS" | tee -a "$MLFLOW_LOG"
-echo    "  Service       : systemctl status mlflow" | tee -a "$MLFLOW_LOG"
-echo    "  Logs          : journalctl -u mlflow -f" | tee -a "$MLFLOW_LOG"
-echo    "  Install log   : $MLFLOW_LOG" | tee -a "$MLFLOW_LOG"
+echo "" | tee -a "$MLFLOW_LOG"
+echo    "  MLflow service : systemctl status mlflow" | tee -a "$MLFLOW_LOG"
+echo    "  MLflow logs    : journalctl -u mlflow -f" | tee -a "$MLFLOW_LOG"
+echo    "  nginx service  : systemctl status nginx" | tee -a "$MLFLOW_LOG"
+echo    "  nginx logs     : journalctl -u nginx -f" | tee -a "$MLFLOW_LOG"
+echo    "  Install log    : $MLFLOW_LOG" | tee -a "$MLFLOW_LOG"
 echo "" | tee -a "$MLFLOW_LOG"
 echo -e "${BOLD}  ── Usage in Python ──${NC}" | tee -a "$MLFLOW_LOG"
 echo    "    import mlflow" | tee -a "$MLFLOW_LOG"
-echo    "    mlflow.set_tracking_uri('http://${HOST_IP}:${MLFLOW_PORT}')" | tee -a "$MLFLOW_LOG"
+echo    "    mlflow.set_tracking_uri('http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}')" | tee -a "$MLFLOW_LOG"
 echo    "    mlflow.set_experiment('my-experiment')" | tee -a "$MLFLOW_LOG"
 echo    "    with mlflow.start_run():" | tee -a "$MLFLOW_LOG"
 echo    "        mlflow.log_param('lr', 1e-4)" | tee -a "$MLFLOW_LOG"
