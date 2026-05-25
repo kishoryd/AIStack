@@ -118,6 +118,14 @@ setenv AISTACK_CATEGORY    $category
 prepend-path PATH            $conda_prefix/bin
 prepend-path PATH            $CONDA_DIR/bin
 prepend-path LD_LIBRARY_PATH $conda_prefix/lib
+
+# ── Run conda activate/deactivate so the shell prompt updates
+if { [ module-info mode load ] } {
+    puts stdout "source $CONDA_DIR/bin/activate $env ;"
+}
+if { [ module-info mode unload ] } {
+    puts stdout "conda deactivate ;"
+}
 EOF
 }
 
