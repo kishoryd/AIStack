@@ -19,8 +19,8 @@ set -o pipefail
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
 MLFLOW_DIR="/home/apps/mlflow"
-MLFLOW_INTERNAL_PORT=5001          # MLflow listens here (localhost only)
-MLFLOW_PUBLIC_PORT=5000            # nginx exposes this to the network
+MLFLOW_INTERNAL_PORT=5002          # MLflow listens here (localhost only)
+MLFLOW_PUBLIC_PORT=5001            # nginx exposes this to the network
 MLFLOW_BACKEND="sqlite:///$MLFLOW_DIR/mlflow.db"
 MLFLOW_ARTIFACTS="$MLFLOW_DIR/artifacts"
 SERVICE_FILE="/etc/systemd/system/mlflow.service"
@@ -162,7 +162,7 @@ fi
 log "=== STEP 5: nginx CORS reverse proxy ==="
 
 if [[ -f "$NGINX_CONF" ]]; then
-    log_skip "nginx MLflow config already exists at $NGINX_CONF"
+    log_skip "nginx MLflow config already exists at $NGINX_CONF — reusing"
 else
     log "Writing nginx CORS config for MLflow..."
     cat > "$NGINX_CONF" << EOF
@@ -202,21 +202,41 @@ server {
 }
 EOF
     log_ok "nginx CORS config written to $NGINX_CONF"
+fi
 
-    # Test nginx config
-    if nginx -t >> "$MLFLOW_LOG" 2>&1; then
-        log_ok "nginx config test passed"
-    else
-        log_err "nginx config test failed — check $MLFLOW_LOG"
-    fi
+# Test config regardless of whether it was just written or already existed
+log "Testing nginx config..."
+if nginx -t >> "$MLFLOW_LOG" 2>&1; then
+    log_ok "nginx config test passed"
+else
+    nginx -t
+    die "nginx config test failed — check $MLFLOW_LOG"
+fi
 
-    systemctl enable nginx >> "$MLFLOW_LOG" 2>&1 \
-        && log_ok "nginx service enabled" \
-        || log_err "Failed to enable nginx"
+# Enable and ensure nginx is running (handles both fresh install and stopped service)
+systemctl enable nginx >> "$MLFLOW_LOG" 2>&1 \
+    && log_ok "nginx service enabled" \
+    || log_err "Failed to enable nginx"
 
-    systemctl restart nginx >> "$MLFLOW_LOG" 2>&1 \
-        && log_ok "nginx restarted" \
-        || log_err "Failed to restart nginx — check: journalctl -u nginx -f"
+if systemctl is-active --quiet nginx; then
+    log "Reloading nginx to pick up config..."
+    systemctl reload nginx >> "$MLFLOW_LOG" 2>&1 \
+        && log_ok "nginx reloaded" \
+        || { log_err "nginx reload failed — attempting restart"; systemctl restart nginx >> "$MLFLOW_LOG" 2>&1; }
+else
+    log "nginx not running — starting..."
+    systemctl start nginx >> "$MLFLOW_LOG" 2>&1 \
+        && log_ok "nginx started" \
+        || { log_err "nginx failed to start — showing error:"; journalctl -u nginx -n 20 --no-pager; die "nginx start failed"; }
+fi
+
+# Open firewall port if firewalld is active
+if systemctl is-active --quiet firewalld; then
+    log "Opening port $MLFLOW_PUBLIC_PORT in firewalld..."
+    firewall-cmd --permanent --add-port="${MLFLOW_PUBLIC_PORT}/tcp" >> "$MLFLOW_LOG" 2>&1 \
+        && firewall-cmd --reload >> "$MLFLOW_LOG" 2>&1 \
+        && log_ok "Firewall port $MLFLOW_PUBLIC_PORT opened" \
+        || log_err "Failed to open firewall port — open manually: firewall-cmd --permanent --add-port=${MLFLOW_PUBLIC_PORT}/tcp"
 fi
 
 # =============================================================================
