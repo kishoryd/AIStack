@@ -152,6 +152,11 @@ log "Installing python and pip in base env..."
     && log_ok "python and pip installed in base env" \
     || log_err "Failed to install python/pip in base env"
 
+log "Installing uv in base env..."
+"$CONDA_DIR/bin/pip" install uv &>/dev/null \
+    && log_ok "uv installed in base env" \
+    || log_err "Failed to install uv in base env"
+
 # =============================================================================
 # FINETUNING
 # =============================================================================

@@ -170,6 +170,57 @@ CREATED=0; SKIPPED=0; FAILED=0
 
 echo "" | tee -a "$SUMMARY_LOG"
 
+# ── Miniconda modulefile (standalone — for users creating their own envs)
+log "Generating miniconda modulefile..."
+MINICONDA_MOD="$MODULEFILE_DIR/miniconda"
+if [[ -f "$MINICONDA_MOD" && $FORCE -eq 0 ]]; then
+    log_skip "miniconda — modulefile already exists"
+    SKIPPED=$((SKIPPED + 1))
+elif [[ ! -d "$CONDA_DIR" ]]; then
+    log_skip "miniconda — $CONDA_DIR not found, skipping"
+    SKIPPED=$((SKIPPED + 1))
+else
+    cat > "$MINICONDA_MOD" << EOF
+#%Module1.0
+# =============================================================================
+# AIStack modulefile — Miniconda3
+# Generated : $(date '+%Y-%m-%d %H:%M:%S')
+# =============================================================================
+
+module-whatis "Miniconda3 — base conda at $CONDA_DIR"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  Miniconda3 base conda installation"
+    puts stderr ""
+    puts stderr "  Conda base : $CONDA_DIR"
+    puts stderr ""
+    puts stderr "  Usage:"
+    puts stderr "    module load AIStack/miniconda"
+    puts stderr "    conda create -n myenv python=3.11"
+    puts stderr "    conda activate myenv"
+    puts stderr ""
+}
+
+setenv CONDA_DIR        $CONDA_DIR
+setenv CONDA_EXE        $CONDA_DIR/bin/conda
+setenv CONDA_PYTHON_EXE $CONDA_DIR/bin/python
+
+prepend-path PATH $CONDA_DIR/bin
+
+if { [ module-info mode load ] } {
+    puts stdout "source $CONDA_DIR/bin/activate base ;"
+}
+if { [ module-info mode unload ] } {
+    puts stdout "conda deactivate ;"
+}
+EOF
+    log_pass "miniconda → $MINICONDA_MOD"
+    CREATED=$((CREATED + 1))
+fi
+
+echo "" | tee -a "$SUMMARY_LOG"
+
 for def in "${ENV_DEFS[@]}"; do
     IFS='|' read -r env display category description <<< "$def"
 
