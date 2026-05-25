@@ -59,38 +59,21 @@ if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
 fi
 
 # =============================================================================
-# STEP 1 — Create isolated conda env and install MLflow
+# STEP 1 — Verify conda env exists (created by install_aistack.sh)
 # =============================================================================
-log "=== STEP 1: Creating conda env '$MLFLOW_ENV' ==="
+log "=== STEP 1: Verifying conda env '$MLFLOW_ENV' ==="
 
-source "$CONDA_DIR/bin/activate"
-
-if [[ -d "$MLFLOW_ENV_PREFIX" ]]; then
-    log_skip "Conda env '$MLFLOW_ENV' already exists at $MLFLOW_ENV_PREFIX"
-else
-    log "Creating conda env '$MLFLOW_ENV' (Python 3.11)..."
-    "$CONDA_DIR/bin/conda" create -y -n "$MLFLOW_ENV" python=3.11 >> "$MLFLOW_LOG" 2>&1 \
-        && log_ok "Conda env '$MLFLOW_ENV' created" \
-        || die "Failed to create conda env '$MLFLOW_ENV' — check $MLFLOW_LOG"
-fi
-
-if "$MLFLOW_ENV_PREFIX/bin/python" -c "import mlflow" &>/dev/null; then
-    MLFLOW_VERSION=$("$MLFLOW_ENV_PREFIX/bin/mlflow" --version 2>/dev/null | awk '{print $NF}')
-    log_skip "MLflow already installed in env '$MLFLOW_ENV' ($MLFLOW_VERSION)"
-else
-    log "Installing mlflow into env '$MLFLOW_ENV'..."
-    "$MLFLOW_ENV_PREFIX/bin/pip" install mlflow sqlalchemy psutil >> "$MLFLOW_LOG" 2>&1 \
-        && log_ok "MLflow installed in env '$MLFLOW_ENV'" \
-        || die "MLflow installation failed — check $MLFLOW_LOG"
+if [[ ! -d "$MLFLOW_ENV_PREFIX" ]]; then
+    die "Conda env '$MLFLOW_ENV' not found at $MLFLOW_ENV_PREFIX — run install_aistack.sh first"
 fi
 
 MLFLOW_BIN="$MLFLOW_ENV_PREFIX/bin/mlflow"
 if [[ ! -x "$MLFLOW_BIN" ]]; then
-    die "mlflow binary not found at $MLFLOW_BIN after install"
+    die "mlflow binary not found at $MLFLOW_BIN — run install_aistack.sh first"
 fi
 
 MLFLOW_VERSION=$("$MLFLOW_BIN" --version 2>/dev/null | awk '{print $NF}')
-log_ok "MLflow $MLFLOW_VERSION ready at $MLFLOW_BIN"
+log_ok "Conda env '$MLFLOW_ENV' ready — MLflow $MLFLOW_VERSION"
 
 # =============================================================================
 # STEP 2 — Create MLflow directories

@@ -337,6 +337,17 @@ begin_env haystack 3.11 && {
 }
 
 # =============================================================================
+# TRACKING
+# =============================================================================
+
+log "=== TRACKING: mlflow ==="
+begin_env mlflow 3.11 && {
+    pip_install mlflow "mlflow" "sqlalchemy" "psutil"
+    register_kernel mlflow "MLflow (Python 3.11)"
+    [[ -z "${ENV_ERRORS[mlflow]}" ]] && mark_done mlflow
+}
+
+# =============================================================================
 # LEGACY
 # =============================================================================
 
@@ -384,6 +395,7 @@ ALL_ENVS=(
     unsloth transformers accelerate trl axolotl llamafactory torchtune
     vllm sglang lmdeploy rayserve tgi
     llamaindex langchain haystack
+    mlflow
     pytorch tensorflow Theano Caffe rapids
 )
 

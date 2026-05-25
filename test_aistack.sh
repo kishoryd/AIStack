@@ -203,6 +203,9 @@ run_env_test llamaindex   3.11 "torch llama_index chromadb qdrant_client pymilvu
 run_env_test langchain    3.11 "torch langchain langchain_core langgraph langsmith chromadb qdrant_client sentence_transformers streamlit fastapi jupyter jupyterlab ipykernel" "LangChain"
 run_env_test haystack     3.11 "torch haystack chromadb qdrant_client sentence_transformers fastapi streamlit jupyter jupyterlab ipykernel"                     "Haystack"
 
+section "TRACKING"
+run_env_test mlflow       3.11 "mlflow sqlalchemy jupyter jupyterlab ipykernel"                             "MLflow"
+
 section "LEGACY"
 run_env_test pytorch  3.10 "torch torchvision jupyter jupyterlab ipykernel"  "PyTorch"
 run_env_test tensorflow   3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
@@ -216,6 +219,7 @@ run_env_test rapids       3.7  "cudf jupyter jupyterlab ipykernel"              
 ALL_ENVS=(
     unsloth transformers accelerate trl axolotl llamafactory torchtune
     vllm sglang lmdeploy rayserve tgi
+    mlflow
     llamaindex langchain haystack
     pytorch tensorflow Theano Caffe rapids
 )
