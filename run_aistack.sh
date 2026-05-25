@@ -93,6 +93,16 @@ bash "$AISTACK_DIR/install_jupyterhub.sh"
 JH_EXIT=$?
 
 # =============================================================================
+# STEP 7 — Install MLflow tracking server as root
+# =============================================================================
+echo ""
+echo ">>> Installing MLflow tracking server as root..."
+echo ""
+
+bash "$AISTACK_DIR/install_mlflow.sh"
+MLFLOW_EXIT=$?
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 echo ""
@@ -103,7 +113,8 @@ echo "  Install      : $([ $INSTALL_EXIT -eq 0 ] && echo PASS || echo FAIL)"
 echo "  Tests        : $([ $TEST_EXIT    -eq 0 ] && echo PASS || echo FAIL)"
 echo "  Modulefiles  : $([ $MOD_EXIT     -eq 0 ] && echo PASS || echo FAIL)"
 echo "  JupyterHub   : $([ $JH_EXIT      -eq 0 ] && echo PASS || echo FAIL)"
+echo "  MLflow       : $([ $MLFLOW_EXIT  -eq 0 ] && echo PASS || echo FAIL)"
 echo "════════════════════════════════════════════════════════════"
 
-[[ $INSTALL_EXIT -ne 0 || $TEST_EXIT -ne 0 || $MOD_EXIT -ne 0 || $JH_EXIT -ne 0 ]] && exit 1
+[[ $INSTALL_EXIT -ne 0 || $TEST_EXIT -ne 0 || $MOD_EXIT -ne 0 || $JH_EXIT -ne 0 || $MLFLOW_EXIT -ne 0 ]] && exit 1
 exit 0

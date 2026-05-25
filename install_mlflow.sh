@@ -18,6 +18,8 @@ set -o pipefail
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
+MLFLOW_ENV="mlflow"
+MLFLOW_ENV_PREFIX="$CONDA_DIR/envs/$MLFLOW_ENV"
 MLFLOW_DIR="/home/apps/mlflow"
 MLFLOW_INTERNAL_PORT=5002          # MLflow listens here (localhost only)
 MLFLOW_PUBLIC_PORT=5001            # nginx exposes this to the network
@@ -44,6 +46,7 @@ die()      { echo -e "${RED}ERROR: $*${NC}" | tee -a "$MLFLOW_LOG"; exit 1; }
 log "=== AIStack MLflow Server Installer — $(date) ==="
 log "AIStack dir      : $AISTACK_DIR"
 log "Conda dir        : $CONDA_DIR"
+log "Conda env        : $MLFLOW_ENV_PREFIX"
 log "MLflow dir       : $MLFLOW_DIR"
 log "Internal port    : $MLFLOW_INTERNAL_PORT"
 log "Public port      : $MLFLOW_PUBLIC_PORT (nginx + CORS)"
@@ -56,26 +59,38 @@ if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
 fi
 
 # =============================================================================
-# STEP 1 — Install MLflow into conda base
+# STEP 1 — Create isolated conda env and install MLflow
 # =============================================================================
-log "=== STEP 1: Installing MLflow ==="
+log "=== STEP 1: Creating conda env '$MLFLOW_ENV' ==="
 
 source "$CONDA_DIR/bin/activate"
 
-if "$CONDA_DIR/bin/python" -c "import mlflow" &>/dev/null; then
-    MLFLOW_VERSION=$("$CONDA_DIR/bin/mlflow" --version 2>/dev/null | awk '{print $NF}')
-    log_skip "MLflow already installed ($MLFLOW_VERSION)"
+if [[ -d "$MLFLOW_ENV_PREFIX" ]]; then
+    log_skip "Conda env '$MLFLOW_ENV' already exists at $MLFLOW_ENV_PREFIX"
 else
-    log "Installing mlflow and dependencies..."
-    "$CONDA_DIR/bin/pip" install mlflow sqlalchemy psutil >> "$MLFLOW_LOG" 2>&1 \
-        && log_ok "MLflow installed" \
+    log "Creating conda env '$MLFLOW_ENV' (Python 3.11)..."
+    "$CONDA_DIR/bin/conda" create -y -n "$MLFLOW_ENV" python=3.11 >> "$MLFLOW_LOG" 2>&1 \
+        && log_ok "Conda env '$MLFLOW_ENV' created" \
+        || die "Failed to create conda env '$MLFLOW_ENV' — check $MLFLOW_LOG"
+fi
+
+if "$MLFLOW_ENV_PREFIX/bin/python" -c "import mlflow" &>/dev/null; then
+    MLFLOW_VERSION=$("$MLFLOW_ENV_PREFIX/bin/mlflow" --version 2>/dev/null | awk '{print $NF}')
+    log_skip "MLflow already installed in env '$MLFLOW_ENV' ($MLFLOW_VERSION)"
+else
+    log "Installing mlflow into env '$MLFLOW_ENV'..."
+    "$MLFLOW_ENV_PREFIX/bin/pip" install mlflow sqlalchemy psutil >> "$MLFLOW_LOG" 2>&1 \
+        && log_ok "MLflow installed in env '$MLFLOW_ENV'" \
         || die "MLflow installation failed — check $MLFLOW_LOG"
 fi
 
-MLFLOW_BIN="$CONDA_DIR/bin/mlflow"
+MLFLOW_BIN="$MLFLOW_ENV_PREFIX/bin/mlflow"
 if [[ ! -x "$MLFLOW_BIN" ]]; then
     die "mlflow binary not found at $MLFLOW_BIN after install"
 fi
+
+MLFLOW_VERSION=$("$MLFLOW_BIN" --version 2>/dev/null | awk '{print $NF}')
+log_ok "MLflow $MLFLOW_VERSION ready at $MLFLOW_BIN"
 
 # =============================================================================
 # STEP 2 — Create MLflow directories
@@ -114,7 +129,7 @@ ExecStart=$MLFLOW_BIN server \
     --port $MLFLOW_INTERNAL_PORT \
     --backend-store-uri $MLFLOW_BACKEND \
     --default-artifact-root $MLFLOW_ARTIFACTS
-Environment="PATH=$CONDA_DIR/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PATH=$MLFLOW_ENV_PREFIX/bin:$CONDA_DIR/bin:/usr/local/bin:/usr/bin:/bin"
 Restart=always
 RestartSec=10
 

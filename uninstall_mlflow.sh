@@ -19,6 +19,8 @@ set -o pipefail
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="/home/apps/miniconda3"
+MLFLOW_ENV="mlflow"
+MLFLOW_ENV_PREFIX="$CONDA_DIR/envs/$MLFLOW_ENV"
 MLFLOW_DIR="/home/apps/mlflow"
 MLFLOW_PUBLIC_PORT=5001
 SERVICE_FILE="/etc/systemd/system/mlflow.service"
@@ -111,21 +113,17 @@ if systemctl is-active --quiet firewalld; then
 fi
 
 # =============================================================================
-# STEP 3 — pip uninstall mlflow from conda base
+# STEP 3 — Remove mlflow conda env
 # =============================================================================
-log "=== STEP 3: pip uninstall ==="
+log "=== STEP 3: conda env '$MLFLOW_ENV' ==="
 
-if [[ -f "$CONDA_DIR/bin/pip" ]]; then
-    if "$CONDA_DIR/bin/python" -c "import mlflow" &>/dev/null; then
-        log "Uninstalling mlflow from conda base..."
-        "$CONDA_DIR/bin/pip" uninstall -y mlflow sqlalchemy psutil >> "$UNINSTALL_LOG" 2>&1 \
-            && log_ok "mlflow uninstalled from conda base" \
-            || log_err "pip uninstall failed — check $UNINSTALL_LOG"
-    else
-        log_skip "mlflow not installed in conda base"
-    fi
+if [[ -d "$MLFLOW_ENV_PREFIX" ]]; then
+    log "Removing conda env '$MLFLOW_ENV'..."
+    "$CONDA_DIR/bin/conda" remove -y --name "$MLFLOW_ENV" --all >> "$UNINSTALL_LOG" 2>&1 \
+        && log_ok "Conda env '$MLFLOW_ENV' removed" \
+        || log_err "Failed to remove conda env — check $UNINSTALL_LOG"
 else
-    log_skip "Conda not found at $CONDA_DIR — skipping pip uninstall"
+    log_skip "Conda env '$MLFLOW_ENV' not found at $MLFLOW_ENV_PREFIX"
 fi
 
 # =============================================================================

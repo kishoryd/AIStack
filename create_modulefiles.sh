@@ -220,6 +220,69 @@ fi
 
 echo "" | tee -a "$SUMMARY_LOG"
 
+# ── MLflow modulefile (service — sets MLFLOW_TRACKING_URI)
+log "Generating mlflow modulefile..."
+MLFLOW_MOD="$MODULEFILE_DIR/mlflow"
+MLFLOW_DIR="/home/apps/mlflow"
+MLFLOW_PORT=5001
+HOST_IP=$(hostname -I | awk '{print $1}')
+if [[ -f "$MLFLOW_MOD" && $FORCE -eq 0 ]]; then
+    log_skip "mlflow — modulefile already exists"
+    SKIPPED=$((SKIPPED + 1))
+elif [[ ! -f "$CONDA_DIR/envs/mlflow/bin/mlflow" ]]; then
+    log_skip "mlflow — conda env not installed, skipping"
+    SKIPPED=$((SKIPPED + 1))
+else
+    cat > "$MLFLOW_MOD" << EOF
+#%Module1.0
+# =============================================================================
+# AIStack modulefile — MLflow Tracking Server
+# Category  : Tracking
+# Generated : $(date '+%Y-%m-%d %H:%M:%S')
+# =============================================================================
+
+module-whatis "MLflow — experiment tracking server at http://$HOST_IP:$MLFLOW_PORT"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  MLflow experiment tracking server"
+    puts stderr ""
+    puts stderr "  Tracking URI : http://$HOST_IP:$MLFLOW_PORT"
+    puts stderr "  Artifacts    : $MLFLOW_DIR/artifacts"
+    puts stderr "  Backend      : $MLFLOW_DIR/mlflow.db"
+    puts stderr ""
+    puts stderr "  Usage:"
+    puts stderr "    module load AIStack/mlflow"
+    puts stderr "    python -c \"import mlflow; mlflow.set_tracking_uri(None)\"  # uses env var"
+    puts stderr ""
+    puts stderr "  Service:"
+    puts stderr "    systemctl status mlflow"
+    puts stderr "    systemctl status nginx"
+    puts stderr ""
+}
+
+conflict AIStack
+
+# ── Point all MLflow clients at the tracking server
+setenv MLFLOW_TRACKING_URI http://$HOST_IP:$MLFLOW_PORT
+
+# ── Make mlflow CLI available from its isolated conda env
+prepend-path PATH $CONDA_DIR/envs/mlflow/bin
+
+if { [ module-info mode load ] } {
+    puts stderr "  MLflow tracking URI : http://$HOST_IP:$MLFLOW_PORT"
+    puts stdout "export MLFLOW_TRACKING_URI=http://$HOST_IP:$MLFLOW_PORT ;"
+}
+if { [ module-info mode unload ] } {
+    puts stdout "unset MLFLOW_TRACKING_URI ;"
+}
+EOF
+    log_pass "mlflow → $MLFLOW_MOD"
+    CREATED=$((CREATED + 1))
+fi
+
+echo "" | tee -a "$SUMMARY_LOG"
+
 for def in "${ENV_DEFS[@]}"; do
     IFS='|' read -r env display category description <<< "$def"
 
@@ -266,7 +329,7 @@ echo -e "${BOLD}  ── Usage ──${NC}" | tee -a "$SUMMARY_LOG"
 echo    "    module avail AIStack              # list all" | tee -a "$SUMMARY_LOG"
 echo    "    module load   AIStack/vllm        # activate" | tee -a "$SUMMARY_LOG"
 echo    "    module unload AIStack/vllm        # deactivate" | tee -a "$SUMMARY_LOG"
-echo    "    module help   AIStack/axolotl     # show info" | tee -a "$SUMMARY_LOG"
+echo    "    module help   AIStack/mlflow      # show info" | tee -a "$SUMMARY_LOG"
 echo    "    module whatis AIStack/langchain   # one-liner" | tee -a "$SUMMARY_LOG"
 echo "" | tee -a "$SUMMARY_LOG"
 echo    "  To regenerate all (overwrite) :" | tee -a "$SUMMARY_LOG"
