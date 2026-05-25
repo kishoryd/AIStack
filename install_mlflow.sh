@@ -193,6 +193,9 @@ server {
         proxy_set_header   X-Real-IP         \$remote_addr;
         proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto \$scheme;
+        # Strip Origin so MLflow's fastapi_security does not block the request.
+        # nginx handles CORS for the browser; MLflow sees it as same-origin.
+        proxy_set_header   Origin            "";
         proxy_read_timeout 300;
         proxy_buffering    off;
     }
@@ -276,12 +279,38 @@ fi
 # =============================================================================
 log "=== STEP 6: Verifying MLflow via nginx ==="
 
-sleep 3
+# First confirm MLflow backend (port $MLFLOW_INTERNAL_PORT) is actually up
+log "Waiting for MLflow backend on port $MLFLOW_INTERNAL_PORT..."
+RETRIES=15
+WAIT=2
+MLFLOW_UP=0
+for ((i=1; i<=RETRIES; i++)); do
+    if curl -sf "http://127.0.0.1:$MLFLOW_INTERNAL_PORT/" &>/dev/null; then
+        MLFLOW_UP=1
+        break
+    fi
+    log "  attempt $i/$RETRIES — waiting ${WAIT}s..."
+    sleep $WAIT
+done
 
-if curl -sf "http://localhost:$MLFLOW_PUBLIC_PORT/health" &>/dev/null; then
-    log_ok "MLflow responding on port $MLFLOW_PUBLIC_PORT (via nginx)"
+if [[ $MLFLOW_UP -eq 0 ]]; then
+    log_err "MLflow backend not responding on port $MLFLOW_INTERNAL_PORT after $((RETRIES * WAIT))s"
+    log_err "MLflow service status:"
+    systemctl status mlflow --no-pager | tail -20 | tee -a "$MLFLOW_LOG"
+    log_err "MLflow logs:"
+    journalctl -u mlflow -n 30 --no-pager | tee -a "$MLFLOW_LOG"
+    die "MLflow backend failed to start"
+fi
+log_ok "MLflow backend up on port $MLFLOW_INTERNAL_PORT"
+
+# Now verify through nginx
+if curl -sf "http://localhost:$MLFLOW_PUBLIC_PORT/" &>/dev/null; then
+    log_ok "MLflow responding on port $MLFLOW_PUBLIC_PORT via nginx"
 else
-    log_err "MLflow not responding on port $MLFLOW_PUBLIC_PORT — check nginx and mlflow service"
+    log_err "nginx proxy not forwarding to MLflow — nginx status:"
+    systemctl status nginx --no-pager | tail -10 | tee -a "$MLFLOW_LOG"
+    log_err "Try: curl -v http://localhost:$MLFLOW_PUBLIC_PORT/"
+    die "nginx not proxying to MLflow"
 fi
 
 # =============================================================================
