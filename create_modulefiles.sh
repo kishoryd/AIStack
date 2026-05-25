@@ -124,7 +124,7 @@ if { [ module-info mode load ] } {
     puts stdout "source $CONDA_DIR/bin/activate $env ;"
 }
 if { [ module-info mode unload ] } {
-    puts stdout "conda deactivate ;"
+    puts stdout "source $CONDA_DIR/bin/activate base ;"
 }
 EOF
 }
