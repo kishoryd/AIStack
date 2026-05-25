@@ -159,7 +159,7 @@ fi
 if [[ ! -f "$MODULEFILE_DIR/.version" || $FORCE -eq 1 ]]; then
     cat > "$MODULEFILE_DIR/.version" << 'EOF'
 #%Module
-set ModulesVersion "unsloth"
+set ModulesVersion "miniconda"
 EOF
     log_pass ".version file written"
 else
