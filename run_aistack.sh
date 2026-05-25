@@ -43,8 +43,24 @@ else
     echo "  ✔ $APPS_DIR created and owned by '$ADMIN_USER'"
 fi
 
-# Give admin read access to the AIStack repo dir
-chmod o+rx "$AISTACK_DIR"
+# =============================================================================
+# STEP 2b — Move AIStack to /home/apps/AIStack if not already there
+# =============================================================================
+TARGET_DIR="$APPS_DIR/AIStack"
+if [[ "$AISTACK_DIR" != "$TARGET_DIR" ]]; then
+    if [[ -d "$TARGET_DIR" ]]; then
+        echo "  ⊘ $TARGET_DIR already exists — skipping move"
+    else
+        echo ">>> Moving AIStack from $AISTACK_DIR to $TARGET_DIR..."
+        cp -r "$AISTACK_DIR" "$TARGET_DIR"
+        chown -R "${ADMIN_USER}:${ADMIN_USER}" "$TARGET_DIR"
+        chmod 755 "$TARGET_DIR"
+        echo "  ✔ AIStack moved to $TARGET_DIR"
+    fi
+    # Re-exec from the new location so all subsequent paths are correct
+    echo ">>> Re-launching from $TARGET_DIR..."
+    exec bash "$TARGET_DIR/run_aistack.sh"
+fi
 
 # =============================================================================
 # STEP 3 — Install as admin
