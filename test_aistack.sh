@@ -87,14 +87,29 @@ import torch
 avail = torch.cuda.is_available()
 count = torch.cuda.device_count() if avail else 0
 names = " | ".join(torch.cuda.get_device_name(i) for i in range(count)) if avail else "N/A"
-print(f"available={avail} count={count} devices={names}")
+# Compute capability — Ada Lovelace is sm_89 (RTX 4500/5000 Ada)
+caps = ""
+if avail:
+    cc = [f"{torch.cuda.get_device_capability(i)[0]}.{torch.cuda.get_device_capability(i)[1]}" for i in range(count)]
+    caps = " | ".join(cc)
+    ada = any(torch.cuda.get_device_capability(i)[0] >= 8 and torch.cuda.get_device_capability(i)[1] >= 9 for i in range(count))
+    print(f"available={avail} count={count} devices={names} caps={caps} ada={ada}")
+else:
+    print(f"available={avail} count={count} devices={names} caps=N/A ada=False")
 EOF
 )
     if echo "$result" | grep -q "available=True"; then
-        local count names
-        count=$(echo "$result" | grep -oP 'count=\K[0-9]+')
-        names=$(echo "$result" | grep -oP 'devices=\K.*')
-        log_pass "CUDA OK — $count GPU(s): $names"
+        local count names caps ada_flag
+        count=$(echo "$result"  | grep -oP 'count=\K[0-9]+')
+        names=$(echo "$result"  | grep -oP 'devices=\K[^ ]+.*?(?= caps=)')
+        caps=$(echo "$result"   | grep -oP 'caps=\K[^ ]+')
+        ada_flag=$(echo "$result" | grep -oP 'ada=\K\w+')
+        log_pass "CUDA OK — $count GPU(s): $names (sm $caps)"
+        if [[ "$ada_flag" == "True" ]]; then
+            log_pass "Ada Lovelace (RTX 4500/5000 Ada) detected — sm_89"
+        else
+            log_warn "GPU detected but not Ada Lovelace series (sm_89). Found: $names"
+        fi
         return 0
     else
         log_fail "CUDA NOT available (torch.cuda.is_available() = False)"
