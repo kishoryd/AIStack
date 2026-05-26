@@ -180,7 +180,7 @@ server {
             return 204;
         }
 
-        # ── CORS headers for all other requests ───────────────────────────────
+        # ── CORS headers ──────────────────────────────────────────────────────
         add_header 'Access-Control-Allow-Origin'  '*'                                                          always;
         add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS, PATCH'                    always;
         add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, Accept, Origin, X-Requested-With' always;
@@ -191,8 +191,6 @@ server {
         proxy_set_header   X-Real-IP         \$remote_addr;
         proxy_set_header   X-Forwarded-For   \$proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto \$scheme;
-        # Strip Origin so MLflow's fastapi_security does not block the request.
-        # nginx handles CORS for the browser; MLflow sees it as same-origin.
         proxy_set_header   Origin            "";
         proxy_read_timeout 300;
         proxy_buffering    off;
@@ -338,7 +336,7 @@ echo -e "${BOLD}═════════════════════�
 echo -e "${BOLD}              MLflow Server Installation Complete${NC}" | tee -a "$MLFLOW_LOG"
 echo -e "${BOLD}════════════════════════════════════════════════════════════${NC}" | tee -a "$MLFLOW_LOG"
 echo "" | tee -a "$MLFLOW_LOG"
-echo    "  UI URL        : http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}  (nginx + CORS)" | tee -a "$MLFLOW_LOG"
+echo    "  UI URL        : http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}" | tee -a "$MLFLOW_LOG"
 echo    "  Tracking URI  : http://${HOST_IP}:${MLFLOW_PUBLIC_PORT}" | tee -a "$MLFLOW_LOG"
 echo    "  Backend store : $MLFLOW_BACKEND" | tee -a "$MLFLOW_LOG"
 echo    "  Artifacts     : $MLFLOW_ARTIFACTS" | tee -a "$MLFLOW_LOG"
