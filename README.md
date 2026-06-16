@@ -1,10 +1,5 @@
 # AIStack
-Installation on Shavak
+Installation on Rudra
 ```bash
-bash run_aistack.sh
-
-JupyterNotebook
-```
-```bash
-bash install_jupyterhub.sh
+bash install_script.sh
 ```
