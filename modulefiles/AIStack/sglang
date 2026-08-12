@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/sglang - SGLang (Inference)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/sglang
+## Conda environment shipped under /home/apps/miniconda/envs/sglang
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   sglang
 set envpath   $condaroot/envs/$envname
 

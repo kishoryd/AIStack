@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/llamafactory - LLaMA-Factory (Finetuning)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/llamafactory
+## Conda environment shipped under /home/apps/miniconda/envs/llamafactory
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   llamafactory
 set envpath   $condaroot/envs/$envname
 

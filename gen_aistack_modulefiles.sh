@@ -2,7 +2,7 @@
 set -euo pipefail
 
 OUT="$(dirname "${BASH_SOURCE[0]}")/modulefiles/AIStack"
-CONDAROOT=/home/apps/MLDL/DL-CondaPy3.10
+CONDAROOT=/home/apps/miniconda
 mkdir -p "$OUT"
 
 # file_name : label

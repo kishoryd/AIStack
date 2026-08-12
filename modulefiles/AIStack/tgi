@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/tgi - TGI (Inference)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/tgi
+## Conda environment shipped under /home/apps/miniconda/envs/tgi
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   tgi
 set envpath   $condaroot/envs/$envname
 

@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/axolotl - Axolotl (Finetuning)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/axolotl
+## Conda environment shipped under /home/apps/miniconda/envs/axolotl
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   axolotl
 set envpath   $condaroot/envs/$envname
 

@@ -20,7 +20,7 @@ FORCE=0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/MLDL/DL-CondaPy3.10}"
+CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/miniconda}"
 LOG_DIR="$AISTACK_DIR/logs/tests"
 SUMMARY_LOG="$LOG_DIR/test_summary.log"
 PASS_DIR="$AISTACK_DIR/logs/done/tests"   # sentinel: <env>.pass

@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/rapids-21.06 - Rapids (Legacy)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/rapids-21.06
+## Conda environment shipped under /home/apps/miniconda/envs/rapids-21.06
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   rapids-21.06
 set envpath   $condaroot/envs/$envname
 

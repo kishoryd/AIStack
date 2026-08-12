@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/tensorflow-2.20 - TensorFlow GPU (Legacy)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/tensorflow-2.20
+## Conda environment shipped under /home/apps/miniconda/envs/tensorflow-2.20
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   tensorflow-2.20
 set envpath   $condaroot/envs/$envname
 

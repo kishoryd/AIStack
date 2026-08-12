@@ -27,7 +27,7 @@ FORCE=0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/MLDL/DL-CondaPy3.10}"
+CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/miniconda}"
 MODULEFILE_DIR="${AISTACK_MODULEFILE_DIR:-/home/apps/modulefiles/AIStack}"
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/modulefiles.log"

@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/transformers - Transformers (Finetuning)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/transformers
+## Conda environment shipped under /home/apps/miniconda/envs/transformers
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   transformers
 set envpath   $condaroot/envs/$envname
 

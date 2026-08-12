@@ -1,9 +1,9 @@
 #%Module1.0
 
 ## AIStack/unsloth - Unsloth (Finetuning)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/unsloth
+## Conda environment shipped under /home/apps/miniconda/envs/unsloth
 
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set condaroot /home/apps/miniconda
 set envname   unsloth
 set envpath   $condaroot/envs/$envname
 
