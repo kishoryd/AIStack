@@ -6,7 +6,7 @@
 # guessing at a version -- re-run this after install_aistack.sh finishes
 # to pick up whatever wasn't ready yet.
 #
-# modulefiles/AIStack/conda-base (bare conda/python, no framework) is
+# modulefiles/AIStack/miniconda-<version> (bare conda/python, no framework) is
 # hand-written separately, not by this script.
 # =============================================================================
 set -euo pipefail
