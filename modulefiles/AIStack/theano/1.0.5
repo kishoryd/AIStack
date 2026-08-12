@@ -1,18 +1,18 @@
 #%Module1.0
 #
-# AIStack :: TensorFlow GPU 2.20.0
+# AIStack :: Theano 1.0.5
 # Legacy
-# CUDA: bundled via tensorflow[and-cuda] pip extra
+# CUDA: n/a (GPU via pygpu/libgpuarray, not CUDA-indexed)
 #
 
-module-whatis "AIStack TensorFlow GPU 2.20.0 :: Legacy, CUDA: bundled via tensorflow[and-cuda] pip extra"
+module-whatis "AIStack Theano 1.0.5 :: Legacy, CUDA: n/a (GPU via pygpu/libgpuarray, not CUDA-indexed)"
 
 proc ModulesHelp { } {
     puts stderr ""
-    puts stderr "  TensorFlow GPU 2.20.0"
+    puts stderr "  Theano 1.0.5"
     puts stderr "  Category : Legacy"
-    puts stderr "  CUDA     : bundled via tensorflow[and-cuda] pip extra"
-    puts stderr "  Prefix   : /home/apps/miniconda/envs/tensorflow-2.20"
+    puts stderr "  CUDA     : n/a (GPU via pygpu/libgpuarray, not CUDA-indexed)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/theano-1.0"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
     puts stderr "    echo \$CONDA_DEFAULT_ENV"
@@ -24,15 +24,15 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set envpath /home/apps/miniconda/envs/tensorflow-2.20
+set envpath /home/apps/miniconda/envs/theano-1.0
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/tensorflow-2.20/2.20.0: $envpath does not exist"
+    puts stderr "AIStack/theano/1.0.5: $envpath does not exist"
     break
 }
 
 setenv       CONDA_PREFIX       $envpath
-setenv       CONDA_DEFAULT_ENV  tensorflow-2.20
+setenv       CONDA_DEFAULT_ENV  theano-1.0
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
 prepend-path PATH               $envpath/bin

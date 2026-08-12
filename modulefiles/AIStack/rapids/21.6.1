@@ -1,18 +1,18 @@
 #%Module1.0
 #
-# AIStack :: PyTorch 2.8.0+cu126
+# AIStack :: Rapids 21.6.1
 # Legacy
-# CUDA: 12.6 (cu126 wheel index)
+# CUDA: 11.2 (cudatoolkit=11.2)
 #
 
-module-whatis "AIStack PyTorch 2.8.0+cu126 :: Legacy, CUDA: 12.6 (cu126 wheel index)"
+module-whatis "AIStack Rapids 21.6.1 :: Legacy, CUDA: 11.2 (cudatoolkit=11.2)"
 
 proc ModulesHelp { } {
     puts stderr ""
-    puts stderr "  PyTorch 2.8.0+cu126"
+    puts stderr "  Rapids 21.6.1"
     puts stderr "  Category : Legacy"
-    puts stderr "  CUDA     : 12.6 (cu126 wheel index)"
-    puts stderr "  Prefix   : /home/apps/miniconda/envs/pytorch-2.8"
+    puts stderr "  CUDA     : 11.2 (cudatoolkit=11.2)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/rapids-21.06"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
     puts stderr "    echo \$CONDA_DEFAULT_ENV"
@@ -24,15 +24,15 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set envpath /home/apps/miniconda/envs/pytorch-2.8
+set envpath /home/apps/miniconda/envs/rapids-21.06
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/pytorch-2.8/2.8.0+cu126: $envpath does not exist"
+    puts stderr "AIStack/rapids/21.6.1: $envpath does not exist"
     break
 }
 
 setenv       CONDA_PREFIX       $envpath
-setenv       CONDA_DEFAULT_ENV  pytorch-2.8
+setenv       CONDA_DEFAULT_ENV  rapids-21.06
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
 prepend-path PATH               $envpath/bin

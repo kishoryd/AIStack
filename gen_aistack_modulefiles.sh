@@ -76,35 +76,43 @@ EOF
   echo "wrote $out"
 fi
 
-# envname : pip-show package : category : cuda version : display name
+# envname : modname : pip-show package : category : cuda version : display name
+#
+# modname is the exposed Lmod module name (module avail / module load).
+# It's the same as envname (the conda env dir name) for most entries, but
+# the Legacy envs were created with a version baked into the env name
+# itself (e.g. "pytorch-2.8") to dodge collisions with production MLDL
+# envs of the same bare name -- modname strips that back off so the
+# module shows up as pytorch/2.8.0+cu126 like everything else, with the
+# version living only in the version slot, not duplicated in the name.
 declare -a ENTRIES=(
-  "unsloth:unsloth:Finetuning:12.8 (cu128 wheel index):Unsloth"
-  "transformers:transformers:Finetuning:12.8 (cu128 wheel index):Transformers"
-  "accelerate:accelerate:Finetuning:12.8 (cu128 wheel index):Accelerate"
-  "trl:trl:Finetuning:12.8 (cu128 wheel index):TRL"
-  "axolotl:axolotl:Finetuning:12.8 (cu128 wheel index):Axolotl"
-  "llamafactory:llamafactory:Finetuning:12.8 (cu128 wheel index):LLaMA-Factory"
-  "torchtune:torchtune:Finetuning:12.8 (cu128 wheel index):TorchTune"
-  "vllm:vllm:Inference:13.0 (cu130 wheel index):vLLM"
-  "sglang:sglang:Inference:13.0 (cu130 wheel index):SGLang"
-  "lmdeploy:lmdeploy:Inference:13.0 (cu130 wheel index):LMDeploy"
-  "rayserve:ray:Inference:13.0 (cu130 wheel index):Ray Serve"
-  "tgi:text-generation:Inference:13.0 (cu130 wheel index):TGI"
-  "llamaindex:llama-index:RAG:13.0 (cu130 wheel index):LlamaIndex"
-  "langchain:langchain:RAG:13.0 (cu130 wheel index):LangChain"
-  "haystack:haystack-ai:RAG:13.0 (cu130 wheel index):Haystack"
-  "mlflow:mlflow:Tracking:n/a (CPU-only, tracking service):MLflow"
-  "pytorch-2.8:torch:Legacy:12.6 (cu126 wheel index):PyTorch"
-  "tensorflow-2.20:tensorflow:Legacy:bundled via tensorflow[and-cuda] pip extra:TensorFlow GPU"
-  "theano-1.0:theano:Legacy:n/a (GPU via pygpu/libgpuarray, not CUDA-indexed):Theano"
-  "caffe-1.0:caffe:Legacy:n/a (GPU via caffe-gpu conda build):Caffe"
-  "rapids-21.06:cudf:Legacy:11.2 (cudatoolkit=11.2):Rapids"
+  "unsloth:unsloth:unsloth:Finetuning:12.8 (cu128 wheel index):Unsloth"
+  "transformers:transformers:transformers:Finetuning:12.8 (cu128 wheel index):Transformers"
+  "accelerate:accelerate:accelerate:Finetuning:12.8 (cu128 wheel index):Accelerate"
+  "trl:trl:trl:Finetuning:12.8 (cu128 wheel index):TRL"
+  "axolotl:axolotl:axolotl:Finetuning:12.8 (cu128 wheel index):Axolotl"
+  "llamafactory:llamafactory:llamafactory:Finetuning:12.8 (cu128 wheel index):LLaMA-Factory"
+  "torchtune:torchtune:torchtune:Finetuning:12.8 (cu128 wheel index):TorchTune"
+  "vllm:vllm:vllm:Inference:13.0 (cu130 wheel index):vLLM"
+  "sglang:sglang:sglang:Inference:13.0 (cu130 wheel index):SGLang"
+  "lmdeploy:lmdeploy:lmdeploy:Inference:13.0 (cu130 wheel index):LMDeploy"
+  "rayserve:rayserve:ray:Inference:13.0 (cu130 wheel index):Ray Serve"
+  "tgi:tgi:text-generation:Inference:13.0 (cu130 wheel index):TGI"
+  "llamaindex:llamaindex:llama-index:RAG:13.0 (cu130 wheel index):LlamaIndex"
+  "langchain:langchain:langchain:RAG:13.0 (cu130 wheel index):LangChain"
+  "haystack:haystack:haystack-ai:RAG:13.0 (cu130 wheel index):Haystack"
+  "mlflow:mlflow:mlflow:Tracking:n/a (CPU-only, tracking service):MLflow"
+  "pytorch-2.8:pytorch:torch:Legacy:12.6 (cu126 wheel index):PyTorch"
+  "tensorflow-2.20:tensorflow:tensorflow:Legacy:bundled via tensorflow[and-cuda] pip extra:TensorFlow GPU"
+  "theano-1.0:theano:theano:Legacy:n/a (GPU via pygpu/libgpuarray, not CUDA-indexed):Theano"
+  "caffe-1.0:caffe:caffe:Legacy:n/a (GPU via caffe-gpu conda build):Caffe"
+  "rapids-21.06:rapids:cudf:Legacy:11.2 (cudatoolkit=11.2):Rapids"
 )
 
 WROTE=0; SKIPPED=0
 
 for e in "${ENTRIES[@]}"; do
-  IFS=':' read -r envname pippkg category cudatag display <<< "$e"
+  IFS=':' read -r envname modname pippkg category cudatag display <<< "$e"
   envpath="$CONDAROOT/envs/$envname"
 
   if [[ ! -d "$envpath" ]]; then
@@ -127,12 +135,18 @@ for e in "${ENTRIES[@]}"; do
     continue
   fi
 
-  # Drop any stale version file for this env before writing the current
-  # one, so module avail doesn't accumulate duplicates.
-  mkdir -p "$OUT/$envname"
-  find "$OUT/$envname" -mindepth 1 -maxdepth 1 ! -name "$version" -exec rm -f {} \;
+  # Some conda packages (e.g. rapidsai's cudf) report a git-describe-style
+  # local version segment (+21.g101fc0fda4) with no meaning to an end user
+  # -- strip that specific shape. Leave meaningful local tags (+cu126, from
+  # the PyTorch CUDA wheel index) untouched.
+  version=$(echo "$version" | sed -E 's/\+[0-9]+\.g[0-9a-f]+$//')
 
-  out="$OUT/$envname/$version"
+  # Drop any stale version file for this module before writing the current
+  # one, so module avail doesn't accumulate duplicates.
+  mkdir -p "$OUT/$modname"
+  find "$OUT/$modname" -mindepth 1 -maxdepth 1 ! -name "$version" -exec rm -f {} \;
+
+  out="$OUT/$modname/$version"
   cat > "$out" <<EOF
 #%Module1.0
 #
@@ -163,7 +177,7 @@ family "condaenv"
 set envpath $envpath
 
 if { ![file isdirectory \$envpath] } {
-    puts stderr "AIStack/$envname/$version: \$envpath does not exist"
+    puts stderr "AIStack/$modname/$version: \$envpath does not exist"
     break
 }
 
