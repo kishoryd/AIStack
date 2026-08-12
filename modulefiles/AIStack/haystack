@@ -1,0 +1,32 @@
+#%Module1.0
+
+## AIStack/haystack - Haystack (RAG)
+## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/haystack
+
+set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set envname   haystack
+set envpath   $condaroot/envs/$envname
+
+module-whatis "Haystack (RAG) conda environment (haystack)"
+
+proc ModulesHelp { } {
+    global envname envpath
+    puts stderr "Loads the $envname conda environment."
+    puts stderr "  CONDA_PREFIX -> $envpath"
+}
+
+# Shares the same family as the MLDL modules -- they're conda envs in
+# the same conda base, so loading one of these auto-swaps out any
+# currently-loaded MLDL or AIStack env instead of stacking PATH entries.
+family "condaenv"
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "AIStack/haystack: environment path $envpath does not exist -- run install_aistack.sh first."
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  $envname
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin

@@ -436,47 +436,53 @@ begin_env mlflow 3.11 && {
 # =============================================================================
 # LEGACY
 # =============================================================================
+# Named *-aistack: this conda base ($CONDA_DIR = /home/apps/MLDL/DL-CondaPy3.10)
+# already has production "Theano" and "Caffe" envs from the MLDL modulefiles
+# (GPU-verified earlier). env_exists() only checks the directory exists, not
+# an AIStack-specific "done" marker, so reusing those bare names here would
+# run `conda install` directly against those live envs and risk corrupting
+# them. The -aistack suffix keeps these fully separate on disk.
 
-log "=== LEGACY: pytorch ==="
-begin_env pytorch 3.10 && {
-    install_common "pytorch"
-    pip_install_with_index pytorch "https://download.pytorch.org/whl/cu126" \
+log "=== LEGACY: pytorch-latest ==="
+begin_env pytorch-latest 3.10 && {
+    install_common "pytorch-latest"
+    pip_install_with_index pytorch-latest "https://download.pytorch.org/whl/cu126" \
         "torch" "torchvision"
-    register_kernel pytorch "PyTorch (Python 3.10)"
-    [[ -z "${ENV_ERRORS[pytorch]}" ]] && mark_done pytorch
+    register_kernel pytorch-latest "PyTorch (Python 3.10, AIStack)"
+    [[ -z "${ENV_ERRORS[pytorch-latest]}" ]] && mark_done pytorch-latest
 }
 
-log "=== LEGACY: tensorflow ==="
-begin_env tensorflow 3.10 && {
-    install_common "tensorflow"
-    pip_install tensorflow "tensorflow[and-cuda]"
-    register_kernel tensorflow "TensorFlow GPU (Python 3.10)"
-    [[ -z "${ENV_ERRORS[tensorflow]}" ]] && mark_done tensorflow
+log "=== LEGACY: tensorflow-latest ==="
+begin_env tensorflow-latest 3.10 && {
+    install_common "tensorflow-latest"
+    pip_install tensorflow-latest "tensorflow[and-cuda]"
+    register_kernel tensorflow-latest "TensorFlow GPU (Python 3.10, AIStack)"
+    [[ -z "${ENV_ERRORS[tensorflow-latest]}" ]] && mark_done tensorflow-latest
 }
 
-log "=== LEGACY: Theano ==="
-begin_env Theano 3.8 && {
-    install_common "Theano"
-    conda_install Theano -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
-    conda_install Theano mkl-service
-    register_kernel Theano "Theano (Python 3.8)"
-    [[ -z "${ENV_ERRORS[Theano]}" ]] && mark_done Theano
+log "=== LEGACY: theano-latest ==="
+begin_env theano-latest 3.8 && {
+    install_common "theano-latest"
+    conda_install theano-latest -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
+    conda_install theano-latest mkl-service
+    register_kernel theano-latest "Theano (Python 3.8, AIStack)"
+    [[ -z "${ENV_ERRORS[theano-latest]}" ]] && mark_done theano-latest
 }
 
-log "=== LEGACY: Caffe ==="
-begin_env Caffe 3.7 && {
-    install_common "Caffe"
-    conda_install Caffe -c anaconda caffe-gpu
-    register_kernel Caffe "Caffe (Python 3.7)"
-    [[ -z "${ENV_ERRORS[Caffe]}" ]] && mark_done Caffe
+log "=== LEGACY: caffe-latest ==="
+begin_env caffe-latest 3.7 && {
+    install_common "caffe-latest"
+    conda_install caffe-latest -c anaconda caffe-gpu
+    register_kernel caffe-latest "Caffe (Python 3.7, AIStack)"
+    [[ -z "${ENV_ERRORS[caffe-latest]}" ]] && mark_done caffe-latest
 }
 
-log "=== LEGACY: rapids ==="
-begin_env rapids 3.7 && {
-    install_common "rapids"
-    conda_install rapids -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
-    register_kernel rapids "Rapids (Python 3.7)"
-    [[ -z "${ENV_ERRORS[rapids]}" ]] && mark_done rapids
+log "=== LEGACY: rapids-latest ==="
+begin_env rapids-latest 3.7 && {
+    install_common "rapids-latest"
+    conda_install rapids-latest -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
+    register_kernel rapids-latest "Rapids (Python 3.7, AIStack)"
+    [[ -z "${ENV_ERRORS[rapids-latest]}" ]] && mark_done rapids-latest
 }
 
 # =============================================================================
@@ -487,7 +493,7 @@ ALL_ENVS=(
     vllm sglang lmdeploy rayserve tgi
     llamaindex langchain haystack
     mlflow
-    pytorch tensorflow Theano Caffe rapids
+    pytorch-latest tensorflow-latest theano-latest caffe-latest rapids-latest
 )
 
 echo ""
