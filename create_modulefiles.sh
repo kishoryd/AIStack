@@ -27,8 +27,8 @@ FORCE=0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="${AISTACK_CONDA_DIR:-/scratch/nsmapplication/dlapp/AIStack/miniconda3}"
-MODULEFILE_DIR="${AISTACK_MODULEFILE_DIR:-/scratch/nsmapplication/dlapp/AIStack/modulefiles/AIStack}"
+CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/MLDL/DL-CondaPy3.10}"
+MODULEFILE_DIR="${AISTACK_MODULEFILE_DIR:-/home/apps/modulefiles/AIStack}"
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/modulefiles.log"
 
@@ -140,18 +140,20 @@ log "Modulefile dir : $MODULEFILE_DIR"
 log "Conda base     : $CONDA_DIR"
 [[ $FORCE -eq 1 ]] && log "  --force: overwriting all existing modulefiles"
 
-# ── STEP 1: Ensure Lmod is available (installed system-wide already; we
-#            don't have root here, so just verify rather than install)
+# ── STEP 1: Ensure Lmod is available (already installed system-wide on
+#            this cluster — verify rather than try to install it)
 if command -v module &>/dev/null || [[ -f /usr/share/lmod/lmod/init/bash ]] || ls /usr/share/lmod/*/modulefiles &>/dev/null; then
     log_skip "Lmod already available"
 else
-    echo -e "${RED}ERROR: Lmod not found on this machine and we have no root to install it. Ask an admin to install Lmod.${NC}"
+    echo -e "${RED}ERROR: Lmod not found on this machine. Ask an admin to install Lmod.${NC}"
     exit 1
 fi
 
-# ── STEP 2: Create modulefile directory (user-writable location, no sudo needed)
+# ── STEP 2: Create modulefile directory ($MODULEFILE_DIR is under
+#            /home/apps by default, owned by cdacapp01 — run this as a
+#            user with write access there, e.g. via sudo/runuser)
 if ! mkdir -p "$MODULEFILE_DIR" 2>/dev/null; then
-    echo -e "${RED}ERROR: Cannot create $MODULEFILE_DIR${NC}"
+    echo -e "${RED}ERROR: Cannot create $MODULEFILE_DIR — check you have write access (switch user / sudo).${NC}"
     exit 1
 fi
 

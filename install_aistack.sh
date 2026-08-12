@@ -2,7 +2,7 @@
 set -o pipefail
 
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="${AISTACK_CONDA_DIR:-/scratch/nsmapplication/dlapp/AIStack/miniconda3}"
+CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/MLDL/DL-CondaPy3.10}"
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
 LOG_DIR="$AISTACK_DIR/logs"
@@ -176,11 +176,37 @@ begin_env() {
 log "=== AIStack Installer — $(date) ==="
 
 if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
-    log "Downloading Miniconda..."
-    wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-        -O /tmp/miniconda.sh
+    MINICONDA_SH="/tmp/miniconda-$$.sh"
+    MINICONDA_OK=0
+    for attempt in 1 2 3; do
+        log "Downloading Miniconda (attempt $attempt/3)..."
+        rm -f "$MINICONDA_SH"
+        if wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+                -O "$MINICONDA_SH" \
+            && [[ $(stat -c%s "$MINICONDA_SH" 2>/dev/null || echo 0) -gt 50000000 ]]; then
+            MINICONDA_OK=1
+            break
+        fi
+        log_err "Download attempt $attempt failed or file too small ($(stat -c%s "$MINICONDA_SH" 2>/dev/null || echo 0) bytes) — retrying"
+        sleep 3
+    done
+
+    if [[ $MINICONDA_OK -ne 1 ]]; then
+        echo "FATAL: could not download Miniconda after 3 attempts. Check network/DNS." >&2
+        exit 1
+    fi
+
     log "Installing Miniconda to $CONDA_DIR..."
-    bash /tmp/miniconda.sh -b -p "$CONDA_DIR"
+    if ! bash "$MINICONDA_SH" -b -p "$CONDA_DIR"; then
+        echo "FATAL: Miniconda installer failed — see above." >&2
+        exit 1
+    fi
+    rm -f "$MINICONDA_SH"
+
+    if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
+        echo "FATAL: Miniconda installer reported success but $CONDA_DIR/bin/conda is missing." >&2
+        exit 1
+    fi
 else
     log_skip "Miniconda already at $CONDA_DIR"
 fi
