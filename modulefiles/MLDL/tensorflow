@@ -1,0 +1,32 @@
+#%Module1.0
+
+## MLDL/tensorflow - TensorFlow (CPU)
+## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Tensorflow
+
+set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set envname   Tensorflow
+set envpath   $condaroot/envs/$envname
+
+module-whatis "TensorFlow (CPU) conda environment (Tensorflow)"
+
+proc ModulesHelp { } {
+    global envname envpath
+    puts stderr "Loads the $envname conda environment."
+    puts stderr "  CONDA_PREFIX -> $envpath"
+}
+
+# Only one MLDL conda environment can be active at a time. Loading another
+# member of this family auto-swaps the previous one out instead of silently
+# stacking two envs' bin/ dirs onto PATH.
+family "condaenv"
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "MLDL/tensorflow: environment path $envpath does not exist -- refusing to load."
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  $envname
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin

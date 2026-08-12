@@ -1,0 +1,32 @@
+#%Module1.0
+
+## MLDL/horovod_pytorch - Horovod + PyTorch (CPU)
+## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Horovod-Pytorch
+
+set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set envname   Horovod-Pytorch
+set envpath   $condaroot/envs/$envname
+
+module-whatis "Horovod + PyTorch (CPU) conda environment (Horovod-Pytorch)"
+
+proc ModulesHelp { } {
+    global envname envpath
+    puts stderr "Loads the $envname conda environment."
+    puts stderr "  CONDA_PREFIX -> $envpath"
+}
+
+# Only one MLDL conda environment can be active at a time. Loading another
+# member of this family auto-swaps the previous one out instead of silently
+# stacking two envs' bin/ dirs onto PATH.
+family "condaenv"
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "MLDL/horovod_pytorch: environment path $envpath does not exist -- refusing to load."
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  $envname
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin

@@ -1,0 +1,32 @@
+#%Module1.0
+
+## MLDL/miniconda - Miniconda base (no framework, just conda/python)
+## Base conda install shipped at /home/apps/MLDL/DL-CondaPy3.10
+
+set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set envname   base
+set envpath   $condaroot
+
+module-whatis "Miniconda base install (no framework, just conda/python)"
+
+proc ModulesHelp { } {
+    global envname envpath
+    puts stderr "Loads the base conda/python install (no framework env)."
+    puts stderr "  CONDA_PREFIX -> $envpath"
+}
+
+# Only one MLDL conda environment can be active at a time. Loading another
+# member of this family auto-swaps the previous one out instead of silently
+# stacking two envs' bin/ dirs onto PATH.
+family "condaenv"
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "MLDL/miniconda: environment path $envpath does not exist -- refusing to load."
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  $envname
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin
