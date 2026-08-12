@@ -1,18 +1,20 @@
 #%Module1.0
+#
+# MLDL :: PyTorch (CPU)
+# Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Pytorch
+#
 
-## MLDL/pytorch - PyTorch (CPU)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Pytorch
-
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
-set envname   Pytorch
-set envpath   $condaroot/envs/$envname
-
-module-whatis "PyTorch (CPU) conda environment (Pytorch)"
+module-whatis "MLDL PyTorch (CPU) conda environment (Pytorch)"
 
 proc ModulesHelp { } {
-    global envname envpath
-    puts stderr "Loads the $envname conda environment."
-    puts stderr "  CONDA_PREFIX -> $envpath"
+    puts stderr ""
+    puts stderr "  PyTorch (CPU)"
+    puts stderr "  Prefix : /home/apps/MLDL/DL-CondaPy3.10/envs/Pytorch"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
 }
 
 # Only one MLDL conda environment can be active at a time. Loading another
@@ -20,8 +22,12 @@ proc ModulesHelp { } {
 # stacking two envs' bin/ dirs onto PATH.
 family "condaenv"
 
+set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set envname   Pytorch
+set envpath   $condaroot/envs/$envname
+
 if { ![file isdirectory $envpath] } {
-    puts stderr "MLDL/pytorch: environment path $envpath does not exist -- refusing to load."
+    puts stderr "MLDL/pytorch: $envpath does not exist"
     break
 }
 

@@ -1,18 +1,22 @@
 #%Module1.0
+#
+# MLDL :: PyTorch (GPU)
+# Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Pytorch-gpu
+# CUDA: 11.8 (torch 2.2.1+cu118)
+#
 
-## MLDL/pytorch_gpu - PyTorch (GPU)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Pytorch-gpu
-
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
-set envname   Pytorch-gpu
-set envpath   $condaroot/envs/$envname
-
-module-whatis "PyTorch (GPU) conda environment (Pytorch-gpu)"
+module-whatis "MLDL PyTorch (GPU) conda environment (Pytorch-gpu), CUDA: 11.8"
 
 proc ModulesHelp { } {
-    global envname envpath
-    puts stderr "Loads the $envname conda environment."
-    puts stderr "  CONDA_PREFIX -> $envpath"
+    puts stderr ""
+    puts stderr "  PyTorch (GPU)"
+    puts stderr "  CUDA   : 11.8 (torch 2.2.1+cu118)"
+    puts stderr "  Prefix : /home/apps/MLDL/DL-CondaPy3.10/envs/Pytorch-gpu"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
 }
 
 # Only one MLDL conda environment can be active at a time. Loading another
@@ -20,8 +24,12 @@ proc ModulesHelp { } {
 # stacking two envs' bin/ dirs onto PATH.
 family "condaenv"
 
+set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set envname   Pytorch-gpu
+set envpath   $condaroot/envs/$envname
+
 if { ![file isdirectory $envpath] } {
-    puts stderr "MLDL/pytorch_gpu: environment path $envpath does not exist -- refusing to load."
+    puts stderr "MLDL/pytorch_gpu: $envpath does not exist"
     break
 }
 

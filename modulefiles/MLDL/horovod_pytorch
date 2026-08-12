@@ -1,18 +1,22 @@
 #%Module1.0
+#
+# MLDL :: Horovod + PyTorch (GPU)
+# Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Horovod-Pytorch
+# CUDA: GPU-enabled build (run `conda list` in-env for exact CUDA runtime)
+#
 
-## MLDL/horovod_pytorch - Horovod + PyTorch (CPU)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/Horovod-Pytorch
-
-set condaroot /home/apps/MLDL/DL-CondaPy3.10
-set envname   Horovod-Pytorch
-set envpath   $condaroot/envs/$envname
-
-module-whatis "Horovod + PyTorch (CPU) conda environment (Horovod-Pytorch)"
+module-whatis "MLDL Horovod + PyTorch (GPU) conda environment (Horovod-Pytorch)"
 
 proc ModulesHelp { } {
-    global envname envpath
-    puts stderr "Loads the $envname conda environment."
-    puts stderr "  CONDA_PREFIX -> $envpath"
+    puts stderr ""
+    puts stderr "  Horovod + PyTorch (GPU)"
+    puts stderr "  CUDA   : GPU-enabled build (run \`conda list\` in-env for exact CUDA runtime)"
+    puts stderr "  Prefix : /home/apps/MLDL/DL-CondaPy3.10/envs/Horovod-Pytorch"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
 }
 
 # Only one MLDL conda environment can be active at a time. Loading another
@@ -20,8 +24,12 @@ proc ModulesHelp { } {
 # stacking two envs' bin/ dirs onto PATH.
 family "condaenv"
 
+set condaroot /home/apps/MLDL/DL-CondaPy3.10
+set envname   Horovod-Pytorch
+set envpath   $condaroot/envs/$envname
+
 if { ![file isdirectory $envpath] } {
-    puts stderr "MLDL/horovod_pytorch: environment path $envpath does not exist -- refusing to load."
+    puts stderr "MLDL/horovod_pytorch: $envpath does not exist"
     break
 }
 
