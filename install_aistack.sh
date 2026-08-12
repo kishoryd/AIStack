@@ -144,6 +144,38 @@ conda_create() {
         || { log_err "Failed to create env '$env'"; ENV_ERRORS[$env]="ENV_CREATION_FAILED"; return 3; }
 }
 
+# This conda base's own openssl package gets corrupted by conda's binary
+# prefix-replacement step on every fresh env: the cached package in pkgs/
+# is fine, but the copy conda writes into each new env has its embedded
+# placeholder path patched in a way that mangles the ELF symbol-version
+# table, dropping OPENSSL_3.0.x tags libssl.so.3 needs from libcrypto.so.3.
+# Result: `import ssl` fails and pip can't reach PyPI at all. Confirmed via
+# a throwaway `conda create -p ...` test env; the system's own
+# /usr/lib64/libssl.so.3 (OpenSSL 3.5.x) is a safe drop-in replacement
+# since it exports a superset of what's needed. Cheap and idempotent to
+# check every time in case a future conda/openssl update fixes this
+# upstream and the copy is no longer needed.
+repair_ssl_at() {
+    local envpath="$1"; local label="$2"
+    if "$envpath/bin/python" -c "import ssl" &>/dev/null; then
+        return 0
+    fi
+    log "  '$label' has a broken SSL module (conda prefix-replacement bug on this cluster) — repairing from system OpenSSL..."
+    if [[ -f /usr/lib64/libssl.so.3 && -f /usr/lib64/libcrypto.so.3 ]]; then
+        cp -f /usr/lib64/libssl.so.3 /usr/lib64/libcrypto.so.3 "$envpath/lib/" 2>>"$LOG_DIR/${label}.log"
+    fi
+    if "$envpath/bin/python" -c "import ssl" &>/dev/null; then
+        log_ok "SSL repaired for '$label'"
+    else
+        log_err "SSL repair failed for '$label' — pip installs will likely fail"
+    fi
+}
+
+repair_ssl() {
+    local env="$1"
+    repair_ssl_at "$CONDA_DIR/envs/$env" "$env"
+}
+
 register_kernel() {
     local env="$1"; local display="$2"
     if [[ -d "$CONDA_DIR/envs/$env/share/jupyter/kernels/$env" ]]; then
@@ -167,6 +199,7 @@ begin_env() {
     conda_create "$env" "$pyver"
     local rc=$?
     [[ $rc -eq 1 || $rc -eq 3 ]] && return 1
+    repair_ssl "$env"
     return 0
 }
 
@@ -182,6 +215,7 @@ if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
     exit 1
 fi
 log_ok "Found existing conda at $CONDA_DIR"
+repair_ssl_at "$CONDA_DIR" "base"
 
 export PATH="$CONDA_DIR/bin:$PATH"
 source "$CONDA_DIR/bin/activate"
