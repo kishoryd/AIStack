@@ -1,19 +1,80 @@
 #!/bin/bash
 # =============================================================================
-# Generates modulefiles/AIStack/<env>-<version> for every AIStack conda env
+# Generates modulefiles/AIStack/<env>/<version> for every AIStack conda env
 # that (a) exists and (b) has its key package actually installed. Envs not
 # yet created, or mid-install, are skipped with a message rather than
 # guessing at a version -- re-run this after install_aistack.sh finishes
 # to pick up whatever wasn't ready yet.
 #
-# modulefiles/AIStack/miniconda-<version> (bare conda/python, no framework) is
-# hand-written separately, not by this script.
+# Also generates modulefiles/AIStack/miniconda/<version> -- the bare base
+# conda/python install, no framework -- versioned off `conda --version`
+# so it stays in sync if the base install itself is ever upgraded.
 # =============================================================================
 set -euo pipefail
 
 OUT="$(dirname "${BASH_SOURCE[0]}")/modulefiles/AIStack"
 CONDAROOT=/home/apps/miniconda
 mkdir -p "$OUT"
+
+if [[ -x "$CONDAROOT/bin/conda" ]]; then
+  cversion=$("$CONDAROOT/bin/conda" --version 2>/dev/null | awk '{print $2}')
+fi
+
+if [[ -z "${cversion:-}" ]]; then
+  echo "SKIP miniconda -- $CONDAROOT/bin/conda not found or --version failed"
+else
+  mkdir -p "$OUT/miniconda"
+  find "$OUT/miniconda" -mindepth 1 -maxdepth 1 ! -name "$cversion" -exec rm -f {} \;
+
+  out="$OUT/miniconda/$cversion"
+  cat > "$out" <<EOF
+#%Module1.0
+#
+# AIStack :: miniconda $cversion
+# Base conda/python install, no framework -- for building a personal env.
+# CUDA: n/a
+#
+
+module-whatis "AIStack miniconda $cversion :: base conda/python (no framework, CUDA n/a)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  miniconda $cversion -- base conda/python install, no framework env."
+    puts stderr ""
+    puts stderr "  AIStack/* framework envs (unsloth, vllm, langchain, ...) are owned"
+    puts stderr "  by cdacapp01: usable by anyone, but not writable. If you need a"
+    puts stderr "  package that isn't already in one of those, build your own here:"
+    puts stderr ""
+    puts stderr "    module load AIStack/miniconda/$cversion"
+    puts stderr "    conda create -n myenv python=3.11"
+    puts stderr "    conda activate myenv"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \\\$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath $CONDAROOT
+
+if { ![file isdirectory \$envpath] } {
+    puts stderr "AIStack/miniconda/$cversion: \$envpath does not exist -- run install_aistack.sh first."
+    break
+}
+
+setenv       CONDA_PREFIX       \$envpath
+setenv       CONDA_DEFAULT_ENV  base
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        \$envpath
+prepend-path PATH               \$envpath/bin
+EOF
+
+  echo "wrote $out"
+fi
 
 # envname : pip-show package : category : cuda version : display name
 declare -a ENTRIES=(

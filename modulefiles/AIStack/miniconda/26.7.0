@@ -29,8 +29,7 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set condaroot /home/apps/miniconda
-set envpath   $condaroot
+set envpath /home/apps/miniconda
 
 if { ![file isdirectory $envpath] } {
     puts stderr "AIStack/miniconda/26.7.0: $envpath does not exist -- run install_aistack.sh first."
