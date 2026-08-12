@@ -1,13 +1,13 @@
 #%Module1.0
 
-## AIStack/rapids-latest - Rapids (Legacy)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/rapids-latest
+## AIStack/pytorch-2.8 - PyTorch (Legacy)
+## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/pytorch-2.8
 
 set condaroot /home/apps/MLDL/DL-CondaPy3.10
-set envname   rapids-latest
+set envname   pytorch-2.8
 set envpath   $condaroot/envs/$envname
 
-module-whatis "Rapids (Legacy) conda environment (rapids-latest)"
+module-whatis "PyTorch (Legacy) conda environment (pytorch-2.8)"
 
 proc ModulesHelp { } {
     global envname envpath
@@ -21,7 +21,7 @@ proc ModulesHelp { } {
 family "condaenv"
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/rapids-latest: environment path $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/pytorch-2.8: environment path $envpath does not exist -- run install_aistack.sh first."
     break
 }
 

@@ -23,11 +23,11 @@ declare -a ENTRIES=(
   "langchain:LangChain (RAG)"
   "haystack:Haystack (RAG)"
   "mlflow:MLflow (Tracking)"
-  "pytorch-latest:PyTorch (Legacy)"
-  "tensorflow-latest:TensorFlow GPU (Legacy)"
-  "theano-latest:Theano (Legacy)"
-  "caffe-latest:Caffe (Legacy)"
-  "rapids-latest:Rapids (Legacy)"
+  "pytorch-2.8:PyTorch (Legacy)"
+  "tensorflow-2.20:TensorFlow GPU (Legacy)"
+  "theano-1.0:Theano (Legacy)"
+  "caffe-1.0:Caffe (Legacy)"
+  "rapids-21.06:Rapids (Legacy)"
 )
 
 for e in "${ENTRIES[@]}"; do

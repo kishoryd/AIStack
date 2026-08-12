@@ -415,46 +415,46 @@ begin_env mlflow 3.11 && {
 # run `conda install` directly against those live envs and risk corrupting
 # them. The -aistack suffix keeps these fully separate on disk.
 
-log "=== LEGACY: pytorch-latest ==="
-begin_env pytorch-latest 3.10 && {
-    install_common "pytorch-latest"
-    pip_install_with_index pytorch-latest "https://download.pytorch.org/whl/cu126" \
+log "=== LEGACY: pytorch-2.8 ==="
+begin_env pytorch-2.8 3.10 && {
+    install_common "pytorch-2.8"
+    pip_install_with_index pytorch-2.8 "https://download.pytorch.org/whl/cu126" \
         "torch==2.8.0+cu126" "torchvision==0.23.0+cu126"
-    register_kernel pytorch-latest "PyTorch (Python 3.10, AIStack)"
-    [[ -z "${ENV_ERRORS[pytorch-latest]}" ]] && mark_done pytorch-latest
+    register_kernel pytorch-2.8 "PyTorch (Python 3.10, AIStack)"
+    [[ -z "${ENV_ERRORS[pytorch-2.8]}" ]] && mark_done pytorch-2.8
 }
 
-log "=== LEGACY: tensorflow-latest ==="
-begin_env tensorflow-latest 3.10 && {
-    install_common "tensorflow-latest"
-    pip_install tensorflow-latest "tensorflow[and-cuda]==2.20.0"
-    register_kernel tensorflow-latest "TensorFlow GPU (Python 3.10, AIStack)"
-    [[ -z "${ENV_ERRORS[tensorflow-latest]}" ]] && mark_done tensorflow-latest
+log "=== LEGACY: tensorflow-2.20 ==="
+begin_env tensorflow-2.20 3.10 && {
+    install_common "tensorflow-2.20"
+    pip_install tensorflow-2.20 "tensorflow[and-cuda]==2.20.0"
+    register_kernel tensorflow-2.20 "TensorFlow GPU (Python 3.10, AIStack)"
+    [[ -z "${ENV_ERRORS[tensorflow-2.20]}" ]] && mark_done tensorflow-2.20
 }
 
-log "=== LEGACY: theano-latest ==="
-begin_env theano-latest 3.8 && {
-    install_common "theano-latest"
-    conda_install theano-latest -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
-    conda_install theano-latest mkl-service
-    register_kernel theano-latest "Theano (Python 3.8, AIStack)"
-    [[ -z "${ENV_ERRORS[theano-latest]}" ]] && mark_done theano-latest
+log "=== LEGACY: theano-1.0 ==="
+begin_env theano-1.0 3.8 && {
+    install_common "theano-1.0"
+    conda_install theano-1.0 -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
+    conda_install theano-1.0 mkl-service
+    register_kernel theano-1.0 "Theano (Python 3.8, AIStack)"
+    [[ -z "${ENV_ERRORS[theano-1.0]}" ]] && mark_done theano-1.0
 }
 
-log "=== LEGACY: caffe-latest ==="
-begin_env caffe-latest 3.7 && {
-    install_common "caffe-latest"
-    conda_install caffe-latest -c anaconda caffe-gpu=1.0
-    register_kernel caffe-latest "Caffe (Python 3.7, AIStack)"
-    [[ -z "${ENV_ERRORS[caffe-latest]}" ]] && mark_done caffe-latest
+log "=== LEGACY: caffe-1.0 ==="
+begin_env caffe-1.0 3.7 && {
+    install_common "caffe-1.0"
+    conda_install caffe-1.0 -c anaconda caffe-gpu=1.0
+    register_kernel caffe-1.0 "Caffe (Python 3.7, AIStack)"
+    [[ -z "${ENV_ERRORS[caffe-1.0]}" ]] && mark_done caffe-1.0
 }
 
-log "=== LEGACY: rapids-latest ==="
-begin_env rapids-latest 3.7 && {
-    install_common "rapids-latest"
-    conda_install rapids-latest -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
-    register_kernel rapids-latest "Rapids (Python 3.7, AIStack)"
-    [[ -z "${ENV_ERRORS[rapids-latest]}" ]] && mark_done rapids-latest
+log "=== LEGACY: rapids-21.06 ==="
+begin_env rapids-21.06 3.7 && {
+    install_common "rapids-21.06"
+    conda_install rapids-21.06 -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
+    register_kernel rapids-21.06 "Rapids (Python 3.7, AIStack)"
+    [[ -z "${ENV_ERRORS[rapids-21.06]}" ]] && mark_done rapids-21.06
 }
 
 # =============================================================================
@@ -465,7 +465,7 @@ ALL_ENVS=(
     vllm sglang lmdeploy rayserve tgi
     llamaindex langchain haystack
     mlflow
-    pytorch-latest tensorflow-latest theano-latest caffe-latest rapids-latest
+    pytorch-2.8 tensorflow-2.20 theano-1.0 caffe-1.0 rapids-21.06
 )
 
 echo ""

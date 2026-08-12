@@ -1,13 +1,13 @@
 #%Module1.0
 
-## AIStack/tensorflow-latest - TensorFlow GPU (Legacy)
-## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/tensorflow-latest
+## AIStack/tensorflow-2.20 - TensorFlow GPU (Legacy)
+## Conda environment shipped under /home/apps/MLDL/DL-CondaPy3.10/envs/tensorflow-2.20
 
 set condaroot /home/apps/MLDL/DL-CondaPy3.10
-set envname   tensorflow-latest
+set envname   tensorflow-2.20
 set envpath   $condaroot/envs/$envname
 
-module-whatis "TensorFlow GPU (Legacy) conda environment (tensorflow-latest)"
+module-whatis "TensorFlow GPU (Legacy) conda environment (tensorflow-2.20)"
 
 proc ModulesHelp { } {
     global envname envpath
@@ -21,7 +21,7 @@ proc ModulesHelp { } {
 family "condaenv"
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/tensorflow-latest: environment path $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/tensorflow-2.20: environment path $envpath does not exist -- run install_aistack.sh first."
     break
 }
 
