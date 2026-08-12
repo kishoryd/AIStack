@@ -4,14 +4,20 @@
 # =============================================================================
 # Usage:
 #   cd /home/apps/AIStack
-#   sudo bash create_modulefiles.sh
+#   bash create_modulefiles.sh
 #
 # IDEMPOTENT — safe to re-run:
 #   - Modulefile is skipped if it already exists (and conda env is unchanged)
 #   - Use --force to overwrite all existing modulefiles
 #
-#   sudo bash create_modulefiles.sh           # skip existing modulefiles
-#   sudo bash create_modulefiles.sh --force   # regenerate all
+#   bash create_modulefiles.sh           # skip existing modulefiles
+#   bash create_modulefiles.sh --force   # regenerate all
+#
+# This is the unprivileged/no-root variant for machines where the AIStack
+# user cannot write to /home/apps or /usr/share/modulefiles (e.g. shared
+# HPC login nodes). Conda base and modulefiles both live under
+# $AISTACK_CONDA_DIR / $AISTACK_MODULEFILE_DIR (defaults below), and Lmod
+# is assumed to already be installed system-wide.
 # =============================================================================
 
 set -o pipefail
@@ -21,8 +27,8 @@ FORCE=0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="/home/apps/miniconda3"
-MODULEFILE_DIR="/usr/share/modulefiles/AIStack"
+CONDA_DIR="${AISTACK_CONDA_DIR:-/scratch/nsmapplication/dlapp/AIStack/miniconda3}"
+MODULEFILE_DIR="${AISTACK_MODULEFILE_DIR:-/scratch/nsmapplication/dlapp/AIStack/modulefiles/AIStack}"
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/modulefiles.log"
 
@@ -134,23 +140,18 @@ log "Modulefile dir : $MODULEFILE_DIR"
 log "Conda base     : $CONDA_DIR"
 [[ $FORCE -eq 1 ]] && log "  --force: overwriting all existing modulefiles"
 
-# ── STEP 1: Ensure Lmod is installed
-if command -v module &>/dev/null || [[ -f /usr/share/lmod/lmod/init/bash ]]; then
-    log_skip "Lmod already installed"
+# ── STEP 1: Ensure Lmod is available (installed system-wide already; we
+#            don't have root here, so just verify rather than install)
+if command -v module &>/dev/null || [[ -f /usr/share/lmod/lmod/init/bash ]] || ls /usr/share/lmod/*/modulefiles &>/dev/null; then
+    log_skip "Lmod already available"
 else
-    log "Installing Lmod via dnf..."
-    if ! command -v dnf &>/dev/null; then
-        echo -e "${RED}ERROR: dnf not found — cannot install Lmod. Install it manually.${NC}"
-        exit 1
-    fi
-    dnf install -y Lmod >> "$LOG_DIR/lmod_install.log" 2>&1 \
-        && log_pass "Lmod installed" \
-        || { echo -e "${RED}ERROR: Lmod installation failed — check $LOG_DIR/lmod_install.log${NC}"; exit 1; }
+    echo -e "${RED}ERROR: Lmod not found on this machine and we have no root to install it. Ask an admin to install Lmod.${NC}"
+    exit 1
 fi
 
-# ── STEP 2: Create modulefile directory
+# ── STEP 2: Create modulefile directory (user-writable location, no sudo needed)
 if ! mkdir -p "$MODULEFILE_DIR" 2>/dev/null; then
-    echo -e "${RED}ERROR: Cannot create $MODULEFILE_DIR — try running with sudo.${NC}"
+    echo -e "${RED}ERROR: Cannot create $MODULEFILE_DIR${NC}"
     exit 1
 fi
 
@@ -223,9 +224,12 @@ echo "" | tee -a "$SUMMARY_LOG"
 # ── MLflow modulefile (service — sets MLFLOW_TRACKING_URI)
 log "Generating mlflow modulefile..."
 MLFLOW_MOD="$MODULEFILE_DIR/mlflow"
-MLFLOW_DIR="/home/apps/mlflow"
+MLFLOW_DIR="${AISTACK_MLFLOW_DIR:-/scratch/nsmapplication/dlapp/AIStack/mlflow}"
 MLFLOW_PORT=5001
 HOST_IP=$(hostname -I | awk '{print $1}')
+# NOTE: this only wires up the CLI/PATH side. The tracking *server* itself
+# (systemd + nginx, see install_mlflow.sh) needs root and was not run here —
+# MLFLOW_TRACKING_URI below won't resolve until that's deployed separately.
 if [[ -f "$MLFLOW_MOD" && $FORCE -eq 0 ]]; then
     log_skip "mlflow — modulefile already exists"
     SKIPPED=$((SKIPPED + 1))
