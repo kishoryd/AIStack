@@ -22,8 +22,14 @@
 # conda's own warning output (`conda list` on each env) and rm -f's exactly
 # what conda already identified but couldn't remove itself.
 #
-# Usage: bash cleanup_stale_conda_meta.sh [conda_dir]
-#   (default conda_dir: /home/apps/miniconda)
+# Not AIStack-specific: any conda base on this cluster where envs mix
+# conda-installed and pip-installed packages can hit this (e.g. the MLDL
+# conda base has the same pattern). Point it at either:
+#
+#   bash cleanup_stale_conda_meta.sh                              # AIStack (default)
+#   bash cleanup_stale_conda_meta.sh /home/apps/MLDL/DL-CondaPy3.10  # MLDL
+#
+# Needs write access to the target conda base's envs (cdacapp01 owns both).
 # =============================================================================
 set -uo pipefail
 
@@ -34,7 +40,8 @@ if [[ ! -d "$CONDA_DIR/envs" ]]; then
     exit 1
 fi
 
-TOTAL=0
+REMOVED=0
+FAILED=0
 for envdir in "$CONDA_DIR/envs"/*/; do
     env=$(basename "$envdir")
 
@@ -46,14 +53,24 @@ for envdir in "$CONDA_DIR/envs"/*/; do
             | grep -oP 'Could not remove or rename \K.*\.json(?=\.\s)')
         [[ -z "$stale" ]] && break
 
+        removed_this_pass=0
         while IFS= read -r f; do
             [[ -z "$f" ]] && continue
-            echo "  [$env] removing stale: $(basename "$f")"
-            rm -f "$f"
-            TOTAL=$((TOTAL + 1))
+            if rm -f "$f" 2>/dev/null && [[ ! -e "$f" ]]; then
+                echo "  [$env] removed: $(basename "$f")"
+                REMOVED=$((REMOVED + 1))
+                removed_this_pass=1
+            else
+                echo "  [$env] FAILED to remove: $(basename "$f")"
+                FAILED=$((FAILED + 1))
+            fi
         done <<< "$stale"
+        # Only worth another pass if something actually changed -- otherwise
+        # conda will just report the exact same stale file(s) again.
+        [[ $removed_this_pass -eq 1 ]] || break
     done
 done
 
 echo
-echo "Removed $TOTAL stale conda-meta file(s)."
+echo "Removed $REMOVED stale conda-meta file(s)."
+[[ $FAILED -gt 0 ]] && echo "Failed to remove $FAILED (check write access to the conda base)."
