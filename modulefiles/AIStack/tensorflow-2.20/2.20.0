@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/tensorflow-2.20
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/tensorflow-2.20/2.20.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/tensorflow-2.20/2.20.0: $envpath does not exist"
     break
 }
 

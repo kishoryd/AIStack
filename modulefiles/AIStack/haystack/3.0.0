@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/haystack
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/haystack/3.0.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/haystack/3.0.0: $envpath does not exist"
     break
 }
 

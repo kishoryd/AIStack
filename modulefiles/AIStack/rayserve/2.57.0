@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/rayserve
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/rayserve/2.57.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/rayserve/2.57.0: $envpath does not exist"
     break
 }
 

@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/axolotl
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/axolotl/0.18.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/axolotl/0.18.0: $envpath does not exist"
     break
 }
 

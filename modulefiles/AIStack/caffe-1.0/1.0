@@ -1,18 +1,18 @@
 #%Module1.0
 #
-# AIStack :: LLaMA-Factory 0.9.5
-# Finetuning
-# CUDA: 12.8 (cu128 wheel index)
+# AIStack :: Caffe 1.0
+# Legacy
+# CUDA: n/a (GPU via caffe-gpu conda build)
 #
 
-module-whatis "AIStack LLaMA-Factory 0.9.5 :: Finetuning, CUDA: 12.8 (cu128 wheel index)"
+module-whatis "AIStack Caffe 1.0 :: Legacy, CUDA: n/a (GPU via caffe-gpu conda build)"
 
 proc ModulesHelp { } {
     puts stderr ""
-    puts stderr "  LLaMA-Factory 0.9.5"
-    puts stderr "  Category : Finetuning"
-    puts stderr "  CUDA     : 12.8 (cu128 wheel index)"
-    puts stderr "  Prefix   : /home/apps/miniconda/envs/llamafactory"
+    puts stderr "  Caffe 1.0"
+    puts stderr "  Category : Legacy"
+    puts stderr "  CUDA     : n/a (GPU via caffe-gpu conda build)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/caffe-1.0"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
     puts stderr "    echo \$CONDA_DEFAULT_ENV"
@@ -24,15 +24,15 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set envpath /home/apps/miniconda/envs/llamafactory
+set envpath /home/apps/miniconda/envs/caffe-1.0
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/llamafactory/0.9.5: $envpath does not exist"
+    puts stderr "AIStack/caffe-1.0/1.0: $envpath does not exist"
     break
 }
 
 setenv       CONDA_PREFIX       $envpath
-setenv       CONDA_DEFAULT_ENV  llamafactory
+setenv       CONDA_DEFAULT_ENV  caffe-1.0
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
 prepend-path PATH               $envpath/bin

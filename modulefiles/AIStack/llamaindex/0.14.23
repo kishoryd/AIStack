@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/llamaindex
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/llamaindex/0.14.23: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/llamaindex/0.14.23: $envpath does not exist"
     break
 }
 

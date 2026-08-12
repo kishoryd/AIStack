@@ -62,7 +62,7 @@ family "condaenv"
 set envpath $CONDAROOT
 
 if { ![file isdirectory \$envpath] } {
-    puts stderr "AIStack/miniconda/$cversion: \$envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/miniconda/$cversion: \$envpath does not exist"
     break
 }
 
@@ -115,6 +115,13 @@ for e in "${ENTRIES[@]}"; do
 
   version=$("$envpath/bin/pip" show "$pippkg" 2>/dev/null | grep '^Version:' | awk '{print $2}' || true)
   if [[ -z "$version" ]]; then
+    # Some legacy packages (e.g. caffe-gpu) are conda-only with no pip
+    # dist-info, so `pip show` never finds them -- fall back to conda's
+    # own package list, matching any conda package name that starts with
+    # $pippkg (e.g. pippkg=caffe matches installed package "caffe-gpu").
+    version=$("$CONDAROOT/bin/conda" list -n "$envname" 2>/dev/null | awk -v p="$pippkg" '$1 ~ "^"p"($|-)" {print $2; exit}')
+  fi
+  if [[ -z "$version" ]]; then
     echo "SKIP $envname -- '$pippkg' not installed yet (env exists, install still in progress)"
     SKIPPED=$((SKIPPED + 1))
     continue
@@ -156,7 +163,7 @@ family "condaenv"
 set envpath $envpath
 
 if { ![file isdirectory \$envpath] } {
-    puts stderr "AIStack/$envname/$version: \$envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/$envname/$version: \$envpath does not exist"
     break
 }
 

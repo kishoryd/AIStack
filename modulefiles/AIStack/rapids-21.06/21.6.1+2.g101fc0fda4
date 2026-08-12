@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/rapids-21.06
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/rapids-21.06/21.6.1+2.g101fc0fda4: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/rapids-21.06/21.6.1+2.g101fc0fda4: $envpath does not exist"
     break
 }
 

@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/torchtune
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/torchtune/0.6.1: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/torchtune/0.6.1: $envpath does not exist"
     break
 }
 

@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/unsloth
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/unsloth/2026.8.15: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/unsloth/2026.8.15: $envpath does not exist"
     break
 }
 

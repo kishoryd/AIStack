@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/tgi
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/tgi/0.7.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/tgi/0.7.0: $envpath does not exist"
     break
 }
 

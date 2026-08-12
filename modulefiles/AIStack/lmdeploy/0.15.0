@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/lmdeploy
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/lmdeploy/0.15.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/lmdeploy/0.15.0: $envpath does not exist"
     break
 }
 

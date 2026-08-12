@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/vllm
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/vllm/0.27.1: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/vllm/0.27.1: $envpath does not exist"
     break
 }
 

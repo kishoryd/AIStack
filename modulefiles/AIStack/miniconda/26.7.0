@@ -32,7 +32,7 @@ family "condaenv"
 set envpath /home/apps/miniconda
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/miniconda/26.7.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/miniconda/26.7.0: $envpath does not exist"
     break
 }
 

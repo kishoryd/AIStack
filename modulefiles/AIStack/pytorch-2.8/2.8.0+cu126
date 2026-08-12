@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/pytorch-2.8
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/pytorch-2.8/2.8.0+cu126: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/pytorch-2.8/2.8.0+cu126: $envpath does not exist"
     break
 }
 

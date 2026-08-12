@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/transformers
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/transformers/5.15.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/transformers/5.15.0: $envpath does not exist"
     break
 }
 
