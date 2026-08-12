@@ -419,7 +419,7 @@ log "=== LEGACY: pytorch-latest ==="
 begin_env pytorch-latest 3.10 && {
     install_common "pytorch-latest"
     pip_install_with_index pytorch-latest "https://download.pytorch.org/whl/cu126" \
-        "torch" "torchvision"
+        "torch==2.8.0+cu126" "torchvision==0.23.0+cu126"
     register_kernel pytorch-latest "PyTorch (Python 3.10, AIStack)"
     [[ -z "${ENV_ERRORS[pytorch-latest]}" ]] && mark_done pytorch-latest
 }
@@ -427,7 +427,7 @@ begin_env pytorch-latest 3.10 && {
 log "=== LEGACY: tensorflow-latest ==="
 begin_env tensorflow-latest 3.10 && {
     install_common "tensorflow-latest"
-    pip_install tensorflow-latest "tensorflow[and-cuda]"
+    pip_install tensorflow-latest "tensorflow[and-cuda]==2.20.0"
     register_kernel tensorflow-latest "TensorFlow GPU (Python 3.10, AIStack)"
     [[ -z "${ENV_ERRORS[tensorflow-latest]}" ]] && mark_done tensorflow-latest
 }
@@ -444,7 +444,7 @@ begin_env theano-latest 3.8 && {
 log "=== LEGACY: caffe-latest ==="
 begin_env caffe-latest 3.7 && {
     install_common "caffe-latest"
-    conda_install caffe-latest -c anaconda caffe-gpu
+    conda_install caffe-latest -c anaconda caffe-gpu=1.0
     register_kernel caffe-latest "Caffe (Python 3.7, AIStack)"
     [[ -z "${ENV_ERRORS[caffe-latest]}" ]] && mark_done caffe-latest
 }
