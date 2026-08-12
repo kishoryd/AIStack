@@ -144,60 +144,6 @@ conda_create() {
         || { log_err "Failed to create env '$env'"; ENV_ERRORS[$env]="ENV_CREATION_FAILED"; return 3; }
 }
 
-# Some conda openssl packages get corrupted by conda's binary
-# prefix-replacement step on every fresh env: the cached package in pkgs/
-# is fine, but the copy conda writes into each new env has its embedded
-# placeholder path patched in a way that mangles the ELF symbol-version
-# table, dropping OPENSSL_3.0.x tags libssl.so.3 needs from libcrypto.so.3.
-# Result: `import ssl` fails and pip can't reach PyPI at all. Confirmed via
-# a throwaway `conda create -p ...` test env.
-#
-# Preferred fix: overwrite with THIS SAME PACKAGE'S OWN cached copy from
-# pkgs/ (which is never touched by the prefix-replace step, so it's intact)
-# -- this keeps the exact openssl build conda/python/cryptography were
-# actually solved against, including ciphers like SM4 that the plain
-# system /usr/lib64 OpenSSL doesn't have (confirmed: system libcrypto is
-# missing EVP_sm4_cbc, which broke cryptography's Rust bindings when we
-# tried that as the fix). System libs are only a last-resort fallback if
-# the cache copy isn't found for some reason.
-find_cached_openssl_libs() {
-    local envpath="$1"
-    local ver
-    ver=$(ls "$envpath/conda-meta" 2>/dev/null | grep -oP '^openssl-\K[0-9.]+(?=-)' | head -1)
-    [[ -z "$ver" ]] && return 1
-    local cachedir
-    cachedir=$(find "$CONDA_DIR/pkgs" -maxdepth 1 -type d -iname "openssl-${ver}-*" 2>/dev/null | head -1)
-    [[ -z "$cachedir" || ! -f "$cachedir/lib/libssl.so.3" || ! -f "$cachedir/lib/libcrypto.so.3" ]] && return 1
-    echo "$cachedir/lib"
-}
-
-repair_ssl_at() {
-    local envpath="$1"; local label="$2"
-    if "$envpath/bin/python" -c "import ssl" &>/dev/null; then
-        return 0
-    fi
-    log "  '$label' has a broken SSL module (conda prefix-replacement bug) — repairing..."
-    local cachelib
-    cachelib=$(find_cached_openssl_libs "$envpath")
-    if [[ -n "$cachelib" ]]; then
-        log "    using this env's own cached openssl build ($cachelib) — keeps full cipher support (e.g. SM4)"
-        cp -f "$cachelib/libssl.so.3" "$cachelib/libcrypto.so.3" "$envpath/lib/" 2>>"$LOG_DIR/${label}.log"
-    elif [[ -f /usr/lib64/libssl.so.3 && -f /usr/lib64/libcrypto.so.3 ]]; then
-        log "    cached build not found — falling back to system OpenSSL (note: may lack some ciphers, e.g. SM4)"
-        cp -f /usr/lib64/libssl.so.3 /usr/lib64/libcrypto.so.3 "$envpath/lib/" 2>>"$LOG_DIR/${label}.log"
-    fi
-    if "$envpath/bin/python" -c "import ssl" &>/dev/null; then
-        log_ok "SSL repaired for '$label'"
-    else
-        log_err "SSL repair failed for '$label' — pip installs will likely fail"
-    fi
-}
-
-repair_ssl() {
-    local env="$1"
-    repair_ssl_at "$CONDA_DIR/envs/$env" "$env"
-}
-
 register_kernel() {
     local env="$1"; local display="$2"
     if [[ -d "$CONDA_DIR/envs/$env/share/jupyter/kernels/$env" ]]; then
@@ -221,7 +167,6 @@ begin_env() {
     conda_create "$env" "$pyver"
     local rc=$?
     [[ $rc -eq 1 || $rc -eq 3 ]] && return 1
-    repair_ssl "$env"
     return 0
 }
 
@@ -231,10 +176,11 @@ begin_env() {
 # Deliberately a *separate* install from /home/apps/MLDL/DL-CondaPy3.10 (the
 # production MLDL conda base) -- keeps AIStack fully isolated from those
 # already-working, GPU-verified envs. It also sidesteps whatever produced
-# the broken libcrypto.so.3 there (see repair_ssl_at below): that conda base
-# was built through some internal Anaconda croot/build-farm pipeline
-# (visible in its has_prefix placeholder paths), which a plain upstream
-# Miniconda installer doesn't go through.
+# a broken libcrypto.so.3 there (conda's binary prefix-replacement step
+# corrupting openssl on every new env in that base): that conda was built
+# through some internal Anaconda croot/build-farm pipeline (visible in its
+# has_prefix placeholder paths), which a plain upstream Miniconda installer
+# doesn't go through.
 log "=== AIStack Installer — $(date) ==="
 
 if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
@@ -272,7 +218,6 @@ if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
 else
     log_skip "Miniconda already at $CONDA_DIR"
 fi
-repair_ssl_at "$CONDA_DIR" "base"
 
 export PATH="$CONDA_DIR/bin:$PATH"
 source "$CONDA_DIR/bin/activate"
