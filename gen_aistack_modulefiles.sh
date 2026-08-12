@@ -81,6 +81,10 @@ proc ModulesHelp { } {
     puts stderr "  CUDA     : $cudatag"
     puts stderr "  Prefix   : $envpath"
     puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \\\$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
 }
 
 # One conda env active at a time: loading another MLDL/AIStack module
