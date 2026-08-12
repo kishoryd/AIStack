@@ -5,6 +5,12 @@ OUT="$(dirname "${BASH_SOURCE[0]}")/modulefiles/AIStack"
 CONDAROOT=/home/apps/miniconda
 mkdir -p "$OUT"
 
+# NOTE: modulefiles/AIStack/miniconda (base conda/python, no framework env,
+# for users building their own personal env) is hand-written, not generated
+# by this loop -- its envpath is $CONDAROOT directly, not $CONDAROOT/envs/X
+# like every entry below. Re-running this script is safe either way since
+# "miniconda" isn't in ENTRIES, so it's never touched/overwritten here.
+
 # file_name : label
 declare -a ENTRIES=(
   "unsloth:Unsloth (Finetuning)"
