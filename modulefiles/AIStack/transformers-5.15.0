@@ -1,0 +1,34 @@
+#%Module1.0
+#
+# AIStack :: Transformers 5.15.0
+# Finetuning
+# CUDA: 12.8 (cu128 wheel index)
+#
+
+module-whatis "AIStack Transformers 5.15.0 :: Finetuning, CUDA: 12.8 (cu128 wheel index)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  Transformers 5.15.0"
+    puts stderr "  Category : Finetuning"
+    puts stderr "  CUDA     : 12.8 (cu128 wheel index)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/transformers"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath /home/apps/miniconda/envs/transformers
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "AIStack/transformers-5.15.0: $envpath does not exist -- run install_aistack.sh first."
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  transformers
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin
