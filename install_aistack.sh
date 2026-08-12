@@ -125,6 +125,18 @@ install_common() {
     pip_install "$env" "${COMMON_PKGS[@]}"
 }
 
+# For envs pinned to Python <3.9 (theano-1.0, caffe-1.0, rapids-21.06):
+# safetensors dropped prebuilt wheels for these interpreters starting with
+# 0.5.x, and its sdist build now bootstraps Rust via "puccinialin", which
+# itself requires Python >=3.9 -- an unbuildable dead end on these envs
+# regardless of any compiler toolchain. Pin to the last version with cp37/
+# cp38 wheels instead of the bare "safetensors" every other env gets.
+install_common_legacy() {
+    local env="$1"
+    local pkgs=("${COMMON_PKGS[@]/safetensors/safetensors<0.5}")
+    pip_install "$env" "${pkgs[@]}"
+}
+
 conda_create() {
     local env="$1"; local pyver="$2"
     if env_exists "$env"; then
@@ -471,7 +483,7 @@ begin_env tensorflow-2.20 3.10 && {
 
 log "=== LEGACY: theano-1.0 ==="
 begin_env theano-1.0 3.8 && {
-    install_common "theano-1.0"
+    install_common_legacy "theano-1.0"
     conda_install theano-1.0 -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
     conda_install theano-1.0 mkl-service
     register_kernel theano-1.0 "Theano (Python 3.8, AIStack)"
@@ -480,7 +492,7 @@ begin_env theano-1.0 3.8 && {
 
 log "=== LEGACY: caffe-1.0 ==="
 begin_env caffe-1.0 3.7 && {
-    install_common "caffe-1.0"
+    install_common_legacy "caffe-1.0"
     conda_install caffe-1.0 -c anaconda caffe-gpu=1.0
     register_kernel caffe-1.0 "Caffe (Python 3.7, AIStack)"
     [[ -z "${ENV_ERRORS[caffe-1.0]}" ]] && mark_done caffe-1.0
@@ -488,7 +500,7 @@ begin_env caffe-1.0 3.7 && {
 
 log "=== LEGACY: rapids-21.06 ==="
 begin_env rapids-21.06 3.7 && {
-    install_common "rapids-21.06"
+    install_common_legacy "rapids-21.06"
     conda_install rapids-21.06 -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
     register_kernel rapids-21.06 "Rapids (Python 3.7, AIStack)"
     [[ -z "${ENV_ERRORS[rapids-21.06]}" ]] && mark_done rapids-21.06
