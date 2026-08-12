@@ -1,18 +1,18 @@
 #%Module1.0
 #
-# AIStack :: TRL 1.9.2
-# Finetuning
-# CUDA: 12.8 (cu128 wheel index)
+# AIStack :: LMDeploy 0.15.0
+# Inference
+# CUDA: 13.0 (cu130 wheel index)
 #
 
-module-whatis "AIStack TRL 1.9.2 :: Finetuning, CUDA: 12.8 (cu128 wheel index)"
+module-whatis "AIStack LMDeploy 0.15.0 :: Inference, CUDA: 13.0 (cu130 wheel index)"
 
 proc ModulesHelp { } {
     puts stderr ""
-    puts stderr "  TRL 1.9.2"
-    puts stderr "  Category : Finetuning"
-    puts stderr "  CUDA     : 12.8 (cu128 wheel index)"
-    puts stderr "  Prefix   : /home/apps/miniconda/envs/trl"
+    puts stderr "  LMDeploy 0.15.0"
+    puts stderr "  Category : Inference"
+    puts stderr "  CUDA     : 13.0 (cu130 wheel index)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/lmdeploy"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
     puts stderr "    echo \$CONDA_DEFAULT_ENV"
@@ -24,15 +24,15 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set envpath /home/apps/miniconda/envs/trl
+set envpath /home/apps/miniconda/envs/lmdeploy
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/trl-1.9.2: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/lmdeploy/0.15.0: $envpath does not exist -- run install_aistack.sh first."
     break
 }
 
 setenv       CONDA_PREFIX       $envpath
-setenv       CONDA_DEFAULT_ENV  trl
+setenv       CONDA_DEFAULT_ENV  lmdeploy
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
 prepend-path PATH               $envpath/bin

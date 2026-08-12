@@ -1,18 +1,18 @@
 #%Module1.0
 #
-# AIStack :: LlamaIndex 0.14.23
-# RAG
+# AIStack :: Ray Serve 2.57.0
+# Inference
 # CUDA: 13.0 (cu130 wheel index)
 #
 
-module-whatis "AIStack LlamaIndex 0.14.23 :: RAG, CUDA: 13.0 (cu130 wheel index)"
+module-whatis "AIStack Ray Serve 2.57.0 :: Inference, CUDA: 13.0 (cu130 wheel index)"
 
 proc ModulesHelp { } {
     puts stderr ""
-    puts stderr "  LlamaIndex 0.14.23"
-    puts stderr "  Category : RAG"
+    puts stderr "  Ray Serve 2.57.0"
+    puts stderr "  Category : Inference"
     puts stderr "  CUDA     : 13.0 (cu130 wheel index)"
-    puts stderr "  Prefix   : /home/apps/miniconda/envs/llamaindex"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/rayserve"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
     puts stderr "    echo \$CONDA_DEFAULT_ENV"
@@ -24,15 +24,15 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set envpath /home/apps/miniconda/envs/llamaindex
+set envpath /home/apps/miniconda/envs/rayserve
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/llamaindex-0.14.23: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/rayserve/2.57.0: $envpath does not exist -- run install_aistack.sh first."
     break
 }
 
 setenv       CONDA_PREFIX       $envpath
-setenv       CONDA_DEFAULT_ENV  llamaindex
+setenv       CONDA_DEFAULT_ENV  rayserve
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
 prepend-path PATH               $envpath/bin

@@ -27,7 +27,7 @@ family "condaenv"
 set envpath /home/apps/miniconda/envs/accelerate
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/accelerate-1.14.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/accelerate/1.14.0: $envpath does not exist -- run install_aistack.sh first."
     break
 }
 

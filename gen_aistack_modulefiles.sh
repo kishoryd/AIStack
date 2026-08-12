@@ -59,11 +59,12 @@ for e in "${ENTRIES[@]}"; do
     continue
   fi
 
-  # Drop any stale modulefile for this env under a different version before
-  # writing the current one, so module avail doesn't accumulate duplicates.
-  find "$OUT" -maxdepth 1 -name "${envname}-*" ! -name "${envname}-${version}" -exec rm -f {} \;
+  # Drop any stale version file for this env before writing the current
+  # one, so module avail doesn't accumulate duplicates.
+  mkdir -p "$OUT/$envname"
+  find "$OUT/$envname" -mindepth 1 -maxdepth 1 ! -name "$version" -exec rm -f {} \;
 
-  out="$OUT/${envname}-${version}"
+  out="$OUT/$envname/$version"
   cat > "$out" <<EOF
 #%Module1.0
 #
@@ -94,7 +95,7 @@ family "condaenv"
 set envpath $envpath
 
 if { ![file isdirectory \$envpath] } {
-    puts stderr "AIStack/${envname}-${version}: \$envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/$envname/$version: \$envpath does not exist -- run install_aistack.sh first."
     break
 }
 

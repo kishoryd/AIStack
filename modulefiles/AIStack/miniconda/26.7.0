@@ -15,7 +15,7 @@ proc ModulesHelp { } {
     puts stderr "  by cdacapp01: usable by anyone, but not writable. If you need a"
     puts stderr "  package that isn't already in one of those, build your own here:"
     puts stderr ""
-    puts stderr "    module load AIStack/miniconda-26.7.0"
+    puts stderr "    module load AIStack/miniconda/26.7.0"
     puts stderr "    conda create -n myenv python=3.11"
     puts stderr "    conda activate myenv"
     puts stderr ""
@@ -33,7 +33,7 @@ set condaroot /home/apps/miniconda
 set envpath   $condaroot
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/miniconda-26.7.0: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/miniconda/26.7.0: $envpath does not exist -- run install_aistack.sh first."
     break
 }
 

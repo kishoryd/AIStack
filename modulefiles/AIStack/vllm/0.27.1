@@ -1,0 +1,38 @@
+#%Module1.0
+#
+# AIStack :: vLLM 0.27.1
+# Inference
+# CUDA: 13.0 (cu130 wheel index)
+#
+
+module-whatis "AIStack vLLM 0.27.1 :: Inference, CUDA: 13.0 (cu130 wheel index)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  vLLM 0.27.1"
+    puts stderr "  Category : Inference"
+    puts stderr "  CUDA     : 13.0 (cu130 wheel index)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/vllm"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath /home/apps/miniconda/envs/vllm
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "AIStack/vllm/0.27.1: $envpath does not exist -- run install_aistack.sh first."
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  vllm
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin

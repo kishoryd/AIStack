@@ -1,18 +1,18 @@
 #%Module1.0
 #
-# AIStack :: TorchTune 0.6.1
-# Finetuning
-# CUDA: 12.8 (cu128 wheel index)
+# AIStack :: SGLang 0.5.17
+# Inference
+# CUDA: 13.0 (cu130 wheel index)
 #
 
-module-whatis "AIStack TorchTune 0.6.1 :: Finetuning, CUDA: 12.8 (cu128 wheel index)"
+module-whatis "AIStack SGLang 0.5.17 :: Inference, CUDA: 13.0 (cu130 wheel index)"
 
 proc ModulesHelp { } {
     puts stderr ""
-    puts stderr "  TorchTune 0.6.1"
-    puts stderr "  Category : Finetuning"
-    puts stderr "  CUDA     : 12.8 (cu128 wheel index)"
-    puts stderr "  Prefix   : /home/apps/miniconda/envs/torchtune"
+    puts stderr "  SGLang 0.5.17"
+    puts stderr "  Category : Inference"
+    puts stderr "  CUDA     : 13.0 (cu130 wheel index)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/sglang"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
     puts stderr "    echo \$CONDA_DEFAULT_ENV"
@@ -24,15 +24,15 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set envpath /home/apps/miniconda/envs/torchtune
+set envpath /home/apps/miniconda/envs/sglang
 
 if { ![file isdirectory $envpath] } {
-    puts stderr "AIStack/torchtune-0.6.1: $envpath does not exist -- run install_aistack.sh first."
+    puts stderr "AIStack/sglang/0.5.17: $envpath does not exist -- run install_aistack.sh first."
     break
 }
 
 setenv       CONDA_PREFIX       $envpath
-setenv       CONDA_DEFAULT_ENV  torchtune
+setenv       CONDA_DEFAULT_ENV  sglang
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
 prepend-path PATH               $envpath/bin
