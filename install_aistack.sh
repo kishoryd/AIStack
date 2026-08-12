@@ -171,45 +171,17 @@ begin_env() {
 }
 
 # =============================================================================
-# STEP 1 — MINICONDA
+# STEP 1 — CONDA (must already exist — this script does not install one)
 # =============================================================================
 log "=== AIStack Installer — $(date) ==="
 
 if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
-    MINICONDA_SH="/tmp/miniconda-$$.sh"
-    MINICONDA_OK=0
-    for attempt in 1 2 3; do
-        log "Downloading Miniconda (attempt $attempt/3)..."
-        rm -f "$MINICONDA_SH"
-        if wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-                -O "$MINICONDA_SH" \
-            && [[ $(stat -c%s "$MINICONDA_SH" 2>/dev/null || echo 0) -gt 50000000 ]]; then
-            MINICONDA_OK=1
-            break
-        fi
-        log_err "Download attempt $attempt failed or file too small ($(stat -c%s "$MINICONDA_SH" 2>/dev/null || echo 0) bytes) — retrying"
-        sleep 3
-    done
-
-    if [[ $MINICONDA_OK -ne 1 ]]; then
-        echo "FATAL: could not download Miniconda after 3 attempts. Check network/DNS." >&2
-        exit 1
-    fi
-
-    log "Installing Miniconda to $CONDA_DIR..."
-    if ! bash "$MINICONDA_SH" -b -p "$CONDA_DIR"; then
-        echo "FATAL: Miniconda installer failed — see above." >&2
-        exit 1
-    fi
-    rm -f "$MINICONDA_SH"
-
-    if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
-        echo "FATAL: Miniconda installer reported success but $CONDA_DIR/bin/conda is missing." >&2
-        exit 1
-    fi
-else
-    log_skip "Miniconda already at $CONDA_DIR"
+    echo "FATAL: no conda found at $CONDA_DIR/bin/conda." >&2
+    echo "  This expects an existing conda install (default: /home/apps/MLDL/DL-CondaPy3.10)." >&2
+    echo "  Point AISTACK_CONDA_DIR at one, or check you have read access to it." >&2
+    exit 1
 fi
+log_ok "Found existing conda at $CONDA_DIR"
 
 export PATH="$CONDA_DIR/bin:$PATH"
 source "$CONDA_DIR/bin/activate"
