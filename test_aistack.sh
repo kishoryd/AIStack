@@ -117,6 +117,68 @@ EOF
     fi
 }
 
+# GPU checks for the non-torch legacy frameworks -- check_cuda() only
+# covers torch-based envs, so tensorflow/theano/caffe/rapids need their
+# own framework-native GPU probe instead.
+check_gpu_tensorflow() {
+    local env="$1"
+    if "$CONDA_DIR/envs/$env/bin/python" -c "
+import tensorflow as tf
+gpus = tf.config.list_physical_devices('GPU')
+assert len(gpus) > 0
+print(gpus)" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — tf.config.list_physical_devices('GPU') non-empty"
+        return 0
+    else
+        log_fail "GPU NOT visible to TensorFlow"
+        return 1
+    fi
+}
+
+check_gpu_theano() {
+    local env="$1"
+    if "$CONDA_DIR/envs/$env/bin/python" -c "
+import pygpu
+ctx = pygpu.init('cuda')
+print(ctx)" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — pygpu.init('cuda') succeeded"
+        return 0
+    else
+        log_fail "GPU context init FAILED (pygpu)"
+        return 1
+    fi
+}
+
+check_gpu_caffe() {
+    local env="$1"
+    if "$CONDA_DIR/envs/$env/bin/python" -c "
+import caffe
+caffe.set_mode_gpu()
+caffe.set_device(0)
+print('ok')" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — caffe.set_mode_gpu()/set_device(0) succeeded"
+        return 0
+    else
+        log_fail "GPU mode FAILED (caffe)"
+        return 1
+    fi
+}
+
+check_gpu_rapids() {
+    local env="$1"
+    if "$CONDA_DIR/envs/$env/bin/python" -c "
+import cudf
+df = cudf.DataFrame({'a': [1, 2, 3]})
+assert df['a'].sum() == 6
+print('ok')" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — cudf DataFrame op succeeded (requires live GPU)"
+        return 0
+    else
+        log_fail "GPU op FAILED (cudf)"
+        return 1
+    fi
+}
+
 check_kernel() {
     local env="$1"
     if [[ -d "$CONDA_DIR/envs/$env/share/jupyter/kernels/$env" ]]; then
@@ -222,11 +284,11 @@ section "TRACKING"
 run_env_test mlflow       3.11 "mlflow sqlalchemy jupyter jupyterlab ipykernel"                             "MLflow"
 
 section "LEGACY"
-run_env_test pytorch  3.10 "torch torchvision jupyter jupyterlab ipykernel"  "PyTorch"
-run_env_test tensorflow   3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
-run_env_test Theano       3.8  "theano pygpu jupyter jupyterlab ipykernel"        "Theano"
-run_env_test Caffe        3.7  "caffe jupyter jupyterlab ipykernel"               "Caffe"
-run_env_test rapids       3.7  "cudf jupyter jupyterlab ipykernel"                "Rapids"
+run_env_test pytorch-2.8     3.10 "torch torchvision jupyter jupyterlab ipykernel"  "PyTorch"
+run_env_test tensorflow-2.20 3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
+run_env_test theano-1.0      3.8  "theano pygpu jupyter jupyterlab ipykernel"        "Theano"
+run_env_test caffe-1.0       3.7  "caffe jupyter jupyterlab ipykernel"               "Caffe"
+run_env_test rapids-21.06    3.7  "cudf jupyter jupyterlab ipykernel"                "Rapids"
 
 # =============================================================================
 # FINAL REPORT
@@ -236,7 +298,7 @@ ALL_ENVS=(
     vllm sglang lmdeploy rayserve tgi
     mlflow
     llamaindex langchain haystack
-    pytorch tensorflow Theano Caffe rapids
+    pytorch-2.8 tensorflow-2.20 theano-1.0 caffe-1.0 rapids-21.06
 )
 
 echo "" | tee -a "$SUMMARY_LOG"
