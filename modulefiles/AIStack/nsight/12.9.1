@@ -1,0 +1,37 @@
+#%Module1.0
+#
+# AIStack :: Nsight Systems/Compute 12.9.1
+# Profiling
+# CUDA: 12.9 (spack cuda-12.9.1, bundles nsys/ncu)
+#
+
+module-whatis "AIStack Nsight Systems/Compute 12.9.1 :: Profiling, bundled with CUDA 12.9"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  Nsight Systems (nsys) + Nsight Compute (ncu) 12.9.1"
+    puts stderr "  Category : Profiling"
+    puts stderr "  CUDA     : 12.9 (spack cuda-12.9.1)"
+    puts stderr ""
+    puts stderr "  Not a conda env -- puts nsys/ncu on PATH only. Load this"
+    puts stderr "  alongside any framework module to profile it, e.g.:"
+    puts stderr ""
+    puts stderr "    module load AIStack/vllm/0.27.1"
+    puts stderr "    module load AIStack/nsight/12.9.1"
+    puts stderr "    nsys profile python my_script.py"
+    puts stderr ""
+    puts stderr "  To confirm it loaded:"
+    puts stderr "    which nsys"
+    puts stderr "    which ncu"
+    puts stderr ""
+}
+
+set spackcuda /home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw
+
+if { ![file isdirectory $spackcuda] } {
+    puts stderr "AIStack/nsight/12.9.1: $spackcuda does not exist"
+    break
+}
+
+prepend-path PATH            $spackcuda/bin
+prepend-path LD_LIBRARY_PATH $spackcuda/targets/x86_64-linux/lib

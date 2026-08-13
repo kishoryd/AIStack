@@ -5,6 +5,17 @@ AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/miniconda}"
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
+TRT_LLM_INDEX="https://pypi.nvidia.com"
+
+# DeepSpeed JIT-compiles several ops (fused adam, transformer kernels, ...)
+# via nvcc/gcc at first *use*, not just at install time -- both the install
+# step and the deployed modulefile need a real CUDA compiler toolchain on
+# PATH, which conda itself doesn't provide. gcc-12.5.0 is within CUDA
+# 12.x's supported host-compiler range, and cuda-12.9.1 covers the same
+# 12.x ABI as the cu128 torch wheel used everywhere else. Picked for this
+# cluster's actual GPU nodes (Cascade Lake Xeon, confirmed via lscpu).
+SPACK_GCC="/home/apps/spack/opt/spack/linux-cascadelake/gcc-12.5.0-2abo2si4ifm6qax4q4fyqc6hi4d4hq3e"
+SPACK_CUDA="/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
 DONE_DIR="$LOG_DIR/done"
@@ -118,6 +129,7 @@ conda_install() {
 COMMON_PKGS=(
     numpy pandas matplotlib scikit-learn scipy tqdm requests pyyaml
     huggingface_hub datasets pillow einops safetensors
+    wandb torch-tb-profiler
 )
 
 install_common() {
@@ -314,6 +326,35 @@ begin_env torchtune 3.11 && {
     [[ -z "${ENV_ERRORS[torchtune]}" ]] && mark_done torchtune
 }
 
+log "=== FINETUNING: nemo ==="
+begin_env nemo 3.11 && {
+    install_common "nemo"
+    pip_install_with_index nemo "$TORCH_CU128" "torch" "torchvision" "torchaudio"
+    pip_install_extra nemo "$TORCH_CU128" "nemo_toolkit[all]" "mlflow"
+    register_kernel nemo "NVIDIA NeMo (Python 3.11)"
+    [[ -z "${ENV_ERRORS[nemo]}" ]] && mark_done nemo
+}
+
+log "=== FINETUNING: deepspeed ==="
+begin_env deepspeed 3.11 && {
+    install_common "deepspeed"
+    pip_install_with_index deepspeed "$TORCH_CU128" "torch" "torchvision" "torchaudio"
+    log "  Building deepspeed (spack gcc-12.5.0 + cuda-12.9.1 toolchain)..."
+    if CUDA_HOME="$SPACK_CUDA" \
+       PATH="$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
+       LD_LIBRARY_PATH="$SPACK_CUDA/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
+       CC="$SPACK_GCC/bin/gcc" CXX="$SPACK_GCC/bin/g++" \
+       "$CONDA_DIR/envs/deepspeed/bin/pip" install deepspeed mlflow \
+           >> "$LOG_DIR/deepspeed.log" 2>&1; then
+        log_ok "deepspeed"
+    else
+        log_err "deepspeed FAILED"
+        ENV_ERRORS[deepspeed]="${ENV_ERRORS[deepspeed]} deepspeed"
+    fi
+    register_kernel deepspeed "DeepSpeed (Python 3.11)"
+    [[ -z "${ENV_ERRORS[deepspeed]}" ]] && mark_done deepspeed
+}
+
 # =============================================================================
 # INFERENCE
 # =============================================================================
@@ -361,6 +402,17 @@ begin_env tgi 3.11 && {
     pip_install_extra tgi "$TORCH_CU130" "text-generation"
     register_kernel tgi "TGI (Python 3.11)"
     [[ -z "${ENV_ERRORS[tgi]}" ]] && mark_done tgi
+}
+
+log "=== INFERENCE: tensorrt-llm ==="
+# NVIDIA ships tensorrt_llm through its own pypi index with its own pinned
+# torch dependency -- don't pre-install torch ourselves, let it pull
+# whatever version it actually needs.
+begin_env tensorrt-llm 3.10 && {
+    install_common "tensorrt-llm"
+    pip_install_extra tensorrt-llm "$TRT_LLM_INDEX" "tensorrt_llm" "mlflow"
+    register_kernel tensorrt-llm "TensorRT-LLM (Python 3.10)"
+    [[ -z "${ENV_ERRORS[tensorrt-llm]}" ]] && mark_done tensorrt-llm
 }
 
 # =============================================================================
@@ -454,6 +506,21 @@ begin_env mlflow 3.11 && {
 }
 
 # =============================================================================
+# GENERATION
+# =============================================================================
+
+log "=== GENERATION: diffusion ==="
+begin_env diffusion 3.11 && {
+    install_common "diffusion"
+    pip_install_with_index diffusion "$TORCH_CU128" "torch" "torchvision" "torchaudio"
+    pip_install_extra diffusion "$TORCH_CU128" \
+        "diffusers" "transformers" "accelerate" "xformers" \
+        "invisible-watermark" "compel" "controlnet-aux" "mlflow"
+    register_kernel diffusion "Diffusion Models (Python 3.11)"
+    [[ -z "${ENV_ERRORS[diffusion]}" ]] && mark_done diffusion
+}
+
+# =============================================================================
 # LEGACY
 # =============================================================================
 # Named after their pinned version (pytorch-2.8, theano-1.0, ...) rather than
@@ -510,10 +577,11 @@ begin_env rapids-21.06 3.7 && {
 # SUMMARY
 # =============================================================================
 ALL_ENVS=(
-    unsloth transformers accelerate trl axolotl llamafactory torchtune
-    vllm sglang lmdeploy rayserve tgi
+    unsloth transformers accelerate trl axolotl llamafactory torchtune nemo deepspeed
+    vllm sglang lmdeploy rayserve tgi tensorrt-llm
     llamaindex langchain haystack
     mlflow
+    diffusion
     pytorch-2.8 tensorflow-2.20 theano-1.0 caffe-1.0 rapids-21.06
 )
 

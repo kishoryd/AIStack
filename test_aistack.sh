@@ -232,9 +232,18 @@ run_env_test() {
         fi
     done
 
-    # ── 4. CUDA (only if torch in imports)
+    # ── 4. GPU check -- torch envs via check_cuda, non-torch legacy
+    # frameworks via their own framework-native probe.
     if echo "$imports" | grep -qw "torch"; then
         check_cuda "$env" || env_failed+=("cuda")
+    elif echo "$imports" | grep -qw "tensorflow"; then
+        check_gpu_tensorflow "$env" || env_failed+=("gpu")
+    elif echo "$imports" | grep -qw "theano"; then
+        check_gpu_theano "$env" || env_failed+=("gpu")
+    elif echo "$imports" | grep -qw "caffe"; then
+        check_gpu_caffe "$env" || env_failed+=("gpu")
+    elif echo "$imports" | grep -qw "cudf"; then
+        check_gpu_rapids "$env" || env_failed+=("gpu")
     fi
 
     # ── 5. Kernel

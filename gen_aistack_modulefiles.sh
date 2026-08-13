@@ -15,6 +15,7 @@ set -euo pipefail
 OUT="$(dirname "${BASH_SOURCE[0]}")/modulefiles/AIStack"
 CONDAROOT=/home/apps/miniconda
 mkdir -p "$OUT"
+WROTE=0; SKIPPED=0
 
 if [[ -x "$CONDAROOT/bin/conda" ]]; then
   cversion=$("$CONDAROOT/bin/conda" --version 2>/dev/null | awk '{print $2}')
@@ -76,6 +77,90 @@ EOF
   echo "wrote $out"
 fi
 
+# deepspeed JIT-compiles several ops (fused adam, transformer kernels, ...)
+# via nvcc/gcc at first *use*, not just at install time -- unlike every
+# other module here, it needs a real CUDA compiler toolchain on PATH at
+# runtime too, which conda doesn't provide. Same spack gcc-12.5.0 +
+# cuda-12.9.1 pair install_aistack.sh builds it with (see SPACK_GCC/
+# SPACK_CUDA there) -- special-cased here since no other entry needs this.
+SPACK_GCC="/home/apps/spack/opt/spack/linux-cascadelake/gcc-12.5.0-2abo2si4ifm6qax4q4fyqc6hi4d4hq3e"
+SPACK_CUDA="/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
+
+envname=deepspeed; envpath="$CONDAROOT/envs/$envname"
+if [[ ! -d "$envpath" ]]; then
+  echo "SKIP deepspeed -- env not created yet"
+  SKIPPED=$((SKIPPED + 1))
+else
+  version=$("$envpath/bin/pip" show deepspeed 2>/dev/null | grep '^Version:' | awk '{print $2}' || true)
+  if [[ -z "$version" ]]; then
+    echo "SKIP deepspeed -- 'deepspeed' not installed yet (env exists, install still in progress)"
+    SKIPPED=$((SKIPPED + 1))
+  else
+    mkdir -p "$OUT/deepspeed"
+    find "$OUT/deepspeed" -mindepth 1 -maxdepth 1 ! -name "$version" -exec rm -f {} \;
+    out="$OUT/deepspeed/$version"
+    cat > "$out" <<EOF
+#%Module1.0
+#
+# AIStack :: DeepSpeed $version
+# Finetuning
+# CUDA: 12.9 (spack gcc-12.5.0 + cuda-12.9.1, needed for op JIT builds)
+#
+
+module-whatis "AIStack DeepSpeed $version :: Finetuning, CUDA: 12.9 (spack toolchain for op JIT builds)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  DeepSpeed $version"
+    puts stderr "  Category : Finetuning"
+    puts stderr "  CUDA     : 12.9 (spack gcc-12.5.0 + cuda-12.9.1)"
+    puts stderr "  Prefix   : $envpath"
+    puts stderr ""
+    puts stderr "  DeepSpeed JIT-compiles several ops (fused adam, transformer"
+    puts stderr "  kernels, ...) via nvcc/gcc the first time they're used, not"
+    puts stderr "  just at install time -- this module puts a matching compiler"
+    puts stderr "  toolchain on PATH so that still works at runtime."
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \\\$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath   $envpath
+set spackgcc  $SPACK_GCC
+set spackcuda $SPACK_CUDA
+
+if { ![file isdirectory \$envpath] } {
+    puts stderr "AIStack/deepspeed/$version: \$envpath does not exist"
+    break
+}
+if { ![file isdirectory \$spackcuda] } {
+    puts stderr "AIStack/deepspeed/$version: \$spackcuda does not exist -- op JIT builds will fail"
+    break
+}
+
+setenv       CONDA_PREFIX       \$envpath
+setenv       CONDA_DEFAULT_ENV  $envname
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        \$envpath
+setenv       CUDA_HOME          \$spackcuda
+setenv       CC                 \$spackgcc/bin/gcc
+setenv       CXX                \$spackgcc/bin/g++
+prepend-path PATH               \$envpath/bin
+prepend-path PATH               \$spackgcc/bin
+prepend-path PATH               \$spackcuda/bin
+prepend-path LD_LIBRARY_PATH    \$spackcuda/targets/x86_64-linux/lib
+EOF
+    echo "wrote $out"
+    WROTE=$((WROTE + 1))
+  fi
+fi
+
 # envname : modname : pip-show package : category : cuda version : display name
 #
 # modname is the exposed Lmod module name (module avail / module load).
@@ -93,6 +178,7 @@ declare -a ENTRIES=(
   "axolotl:axolotl:axolotl:Finetuning:12.8 (cu128 wheel index):Axolotl"
   "llamafactory:llamafactory:llamafactory:Finetuning:12.8 (cu128 wheel index):LLaMA-Factory"
   "torchtune:torchtune:torchtune:Finetuning:12.8 (cu128 wheel index):TorchTune"
+  "nemo:nemo:nemo_toolkit:Finetuning:12.8 (cu128 wheel index):NVIDIA NeMo"
   "vllm:vllm:vllm:Inference:13.0 (cu130 wheel index):vLLM"
   "sglang:sglang:sglang:Inference:13.0 (cu130 wheel index):SGLang"
   "lmdeploy:lmdeploy:lmdeploy:Inference:13.0 (cu130 wheel index):LMDeploy"
@@ -107,9 +193,9 @@ declare -a ENTRIES=(
   "theano-1.0:theano:theano:Legacy:n/a (GPU via pygpu/libgpuarray, not CUDA-indexed):Theano"
   "caffe-1.0:caffe:caffe:Legacy:n/a (GPU via caffe-gpu conda build):Caffe"
   "rapids-21.06:rapids:cudf:Legacy:11.2 (cudatoolkit=11.2):Rapids"
+  "tensorrt-llm:tensorrt-llm:tensorrt_llm:Inference:bundled via NVIDIA pypi index:TensorRT-LLM"
+  "diffusion:diffusion:diffusers:Generation:12.8 (cu128 wheel index):Diffusion Models"
 )
-
-WROTE=0; SKIPPED=0
 
 for e in "${ENTRIES[@]}"; do
   IFS=':' read -r envname modname pippkg category cudatag display <<< "$e"
