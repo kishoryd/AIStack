@@ -30,7 +30,7 @@ def main():
     epochs = 20
 
     mlflow.set_experiment("aistack-smoke-test")
-    with mlflow.start_run(run_name=f"tiny-gpt2-{device}"):
+    with mlflow.start_run(run_name=f"tiny-gpt2-{device}", log_system_metrics=True):
         mlflow.log_param("model", MODEL_NAME)
         mlflow.log_param("device", device)
         mlflow.log_param("lr", 5e-4)

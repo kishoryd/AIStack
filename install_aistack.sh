@@ -136,7 +136,7 @@ conda_install() {
 COMMON_PKGS=(
     numpy pandas matplotlib scikit-learn scipy tqdm requests pyyaml
     huggingface_hub datasets pillow einops safetensors
-    wandb torch-tb-profiler
+    wandb torch-tb-profiler psutil pynvml
 )
 
 install_common() {

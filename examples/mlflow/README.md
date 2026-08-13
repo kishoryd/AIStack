@@ -24,6 +24,15 @@ Results land in the `aistack-smoke-test` experiment on the MLflow server
 (`http://172.40.0.23:5551`, or tunnel it to your own machine:
 `ssh -L 5551:localhost:5551 172.40.0.23`).
 
+Both scripts pass `log_system_metrics=True` to `mlflow.start_run()`, so
+each run also gets CPU/GPU utilization, memory, disk, and network I/O
+sampled automatically in the background — shown on a separate "System
+metrics" tab on the run's page in the UI, alongside the custom
+`loss`/`elapsed_seconds` metrics. Needs `psutil` (CPU/RAM) and `pynvml`
+(GPU) in whichever env actually runs the script — both are in
+`COMMON_PKGS` in `install_aistack.sh` as of this change, so any env
+created/re-synced after it has them.
+
 ## Longer-running variant (`train_llm_1hr.py` / `submit_llm_1hr.sh`)
 
 Same idea, but trains in a time-bounded loop (default 1 hour) instead of
