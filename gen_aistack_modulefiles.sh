@@ -167,6 +167,16 @@ fi
 # pygpu.init('cuda') fails with "Could not load libnvrtc.so". Verified
 # working against spack's cuda-12.9.1 despite pygpu/libgpuarray being a
 # much older (~2019) library than that CUDA release.
+#
+# Separately: theano's default C-compiled linker (lazylinker_c) JIT-
+# compiles at import time via gcc. GPU compute nodes on this cluster have
+# no /usr/include at all (glibc-headers/glibc-devel show installed in the
+# RPM db, but every file is physically missing from the node image) --
+# confirmed this breaks *any* compiler, including spack's gcc (it still
+# chains to the system glibc headers via #include_next). Not fixable from
+# here -- it's a node-provisioning gap, not an AIStack issue. Routed
+# around it instead: THEANO_FLAGS="linker=vm,cxx=" forces theano's pure-
+# Python VM linker, which needs no C compiler at all. Verified working.
 envname=theano-1.0; envpath="$CONDAROOT/envs/$envname"
 if [[ ! -d "$envpath" ]]; then
   echo "SKIP theano-1.0 -- env not created yet"
@@ -219,6 +229,7 @@ setenv       CONDA_PREFIX       \$envpath
 setenv       CONDA_DEFAULT_ENV  $envname
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        \$envpath
+setenv       THEANO_FLAGS       "linker=vm,cxx="
 prepend-path PATH               \$envpath/bin
 prepend-path LD_LIBRARY_PATH    \$spackcuda/targets/x86_64-linux/lib
 EOF

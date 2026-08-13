@@ -233,8 +233,19 @@ run_env_test() {
     check_python_version "$env" "$pyver" || env_failed+=("python-version")
 
     # ── 3. Package imports
+    #
+    # theano-1.0's default C-compiled linker JIT-compiles at import time
+    # via gcc -- GPU compute nodes on this cluster have no /usr/include at
+    # all (confirmed: glibc-headers/glibc-devel show installed in the RPM
+    # db, but every file is physically missing from the node image), which
+    # breaks *any* compiler, spack's included. Not an AIStack-fixable
+    # issue -- routed around it the same way the real modulefile does
+    # (gen_aistack_modulefiles.sh): force theano's pure-Python VM linker,
+    # which needs no C compiler at all.
+    local theano_flags=""
+    [[ "$env" == "theano-1.0" ]] && theano_flags="linker=vm,cxx="
     for pkg in $imports; do
-        if "$CONDA_DIR/envs/$env/bin/python" -c "import $pkg" \
+        if THEANO_FLAGS="$theano_flags" "$CONDA_DIR/envs/$env/bin/python" -c "import $pkg" \
                 >> "$LOG_DIR/${env}.log" 2>&1; then
             log_pass "import $pkg"
         else

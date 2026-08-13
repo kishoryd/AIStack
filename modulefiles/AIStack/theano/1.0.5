@@ -36,5 +36,6 @@ setenv       CONDA_PREFIX       $envpath
 setenv       CONDA_DEFAULT_ENV  theano-1.0
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
+setenv       THEANO_FLAGS       "linker=vm,cxx="
 prepend-path PATH               $envpath/bin
 prepend-path LD_LIBRARY_PATH    $spackcuda/targets/x86_64-linux/lib
