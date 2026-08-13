@@ -386,6 +386,33 @@ begin_env lmdeploy 3.11 && {
     [[ -z "${ENV_ERRORS[lmdeploy]}" ]] && mark_done lmdeploy
 }
 
+log "=== INFERENCE: llamacpp ==="
+# llama-cpp-python compiles the whole ggml/llama.cpp codebase via CMake at
+# pip-install time -- CMAKE_ARGS=-DGGML_CUDA=on turns on the CUDA backend,
+# and like deepspeed this needs a real nvcc/gcc, which conda doesn't
+# provide. Unlike deepspeed there's no JIT step later: once built, the
+# compiled extension just needs the CUDA *runtime* libs on
+# LD_LIBRARY_PATH at import time, not nvcc/gcc again (that's why the
+# modulefile for this one is simpler than deepspeed's).
+begin_env llamacpp 3.11 && {
+    install_common "llamacpp"
+    log "  Building llama-cpp-python (spack gcc-12.5.0 + cuda-12.9.1 toolchain)..."
+    if CUDA_HOME="$SPACK_CUDA" \
+       PATH="$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
+       LD_LIBRARY_PATH="$SPACK_CUDA/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
+       CC="$SPACK_GCC/bin/gcc" CXX="$SPACK_GCC/bin/g++" \
+       CMAKE_ARGS="-DGGML_CUDA=on" \
+       "$CONDA_DIR/envs/llamacpp/bin/pip" install cmake llama-cpp-python mlflow \
+           >> "$LOG_DIR/llamacpp.log" 2>&1; then
+        log_ok "llama-cpp-python"
+    else
+        log_err "llama-cpp-python FAILED"
+        ENV_ERRORS[llamacpp]="${ENV_ERRORS[llamacpp]} llama-cpp-python"
+    fi
+    register_kernel llamacpp "llama.cpp (Python 3.11)"
+    [[ -z "${ENV_ERRORS[llamacpp]}" ]] && mark_done llamacpp
+}
+
 log "=== INFERENCE: rayserve ==="
 begin_env rayserve 3.11 && {
     install_common "rayserve"
@@ -578,7 +605,7 @@ begin_env rapids-21.06 3.7 && {
 # =============================================================================
 ALL_ENVS=(
     unsloth transformers accelerate trl axolotl llamafactory torchtune nemo deepspeed
-    vllm sglang lmdeploy rayserve tgi tensorrt-llm
+    vllm sglang lmdeploy rayserve tgi tensorrt-llm llamacpp
     llamaindex langchain haystack
     mlflow
     diffusion

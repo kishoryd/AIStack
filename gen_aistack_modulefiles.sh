@@ -161,6 +161,71 @@ EOF
   fi
 fi
 
+# llama-cpp-python is built with CUDA support via CMake at pip-install
+# time (see install_aistack.sh) -- unlike deepspeed, there's no JIT step
+# later, so this only needs the CUDA *runtime* libs on LD_LIBRARY_PATH at
+# import time, not nvcc/gcc again. Special-cased for that one extra path,
+# same as deepspeed/miniconda above.
+envname=llamacpp; envpath="$CONDAROOT/envs/$envname"
+if [[ ! -d "$envpath" ]]; then
+  echo "SKIP llamacpp -- env not created yet"
+  SKIPPED=$((SKIPPED + 1))
+else
+  version=$("$envpath/bin/pip" show llama-cpp-python 2>/dev/null | grep '^Version:' | awk '{print $2}' || true)
+  if [[ -z "$version" ]]; then
+    echo "SKIP llamacpp -- 'llama-cpp-python' not installed yet (env exists, install still in progress)"
+    SKIPPED=$((SKIPPED + 1))
+  else
+    mkdir -p "$OUT/llamacpp"
+    find "$OUT/llamacpp" -mindepth 1 -maxdepth 1 ! -name "$version" -exec rm -f {} \;
+    out="$OUT/llamacpp/$version"
+    cat > "$out" <<EOF
+#%Module1.0
+#
+# AIStack :: llama.cpp $version
+# Inference
+# CUDA: 12.9 (built via spack gcc-12.5.0 + cuda-12.9.1, CMAKE_ARGS=-DGGML_CUDA=on)
+#
+
+module-whatis "AIStack llama.cpp $version :: Inference, CUDA: 12.9 (GGML_CUDA build)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  llama.cpp (llama-cpp-python) $version"
+    puts stderr "  Category : Inference"
+    puts stderr "  CUDA     : 12.9 (built with GGML_CUDA=on)"
+    puts stderr "  Prefix   : $envpath"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \\\$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath   $envpath
+set spackcuda "/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
+
+if { ![file isdirectory \$envpath] } {
+    puts stderr "AIStack/llamacpp/$version: \$envpath does not exist"
+    break
+}
+
+setenv       CONDA_PREFIX       \$envpath
+setenv       CONDA_DEFAULT_ENV  $envname
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        \$envpath
+prepend-path PATH               \$envpath/bin
+prepend-path LD_LIBRARY_PATH    \$spackcuda/targets/x86_64-linux/lib
+EOF
+    echo "wrote $out"
+    WROTE=$((WROTE + 1))
+  fi
+fi
+
 # envname : modname : pip-show package : category : cuda version : display name
 #
 # modname is the exposed Lmod module name (module avail / module load).
