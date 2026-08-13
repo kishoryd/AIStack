@@ -161,6 +161,72 @@ EOF
   fi
 fi
 
+# pygpu (theano's GPU backend) JIT-compiles GPU kernels at runtime via
+# libnvrtc.so, which the conda env doesn't provide on its own (theano-1.0
+# was installed with no cudatoolkit package at all) -- without this,
+# pygpu.init('cuda') fails with "Could not load libnvrtc.so". Verified
+# working against spack's cuda-12.9.1 despite pygpu/libgpuarray being a
+# much older (~2019) library than that CUDA release.
+envname=theano-1.0; envpath="$CONDAROOT/envs/$envname"
+if [[ ! -d "$envpath" ]]; then
+  echo "SKIP theano-1.0 -- env not created yet"
+  SKIPPED=$((SKIPPED + 1))
+else
+  version=$("$CONDAROOT/bin/conda" list -n "$envname" 2>/dev/null | awk '$1 == "theano" {print $2; exit}')
+  if [[ -z "$version" ]]; then
+    echo "SKIP theano-1.0 -- 'theano' not installed yet (env exists, install still in progress)"
+    SKIPPED=$((SKIPPED + 1))
+  else
+    mkdir -p "$OUT/theano"
+    find "$OUT/theano" -mindepth 1 -maxdepth 1 ! -name "$version" -exec rm -f {} \;
+    out="$OUT/theano/$version"
+    cat > "$out" <<EOF
+#%Module1.0
+#
+# AIStack :: Theano $version
+# Legacy
+# CUDA: 12.9 (spack cuda-12.9.1, runtime libnvrtc.so for pygpu JIT)
+#
+
+module-whatis "AIStack Theano $version :: Legacy, CUDA: 12.9 (runtime libnvrtc.so for pygpu JIT)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  Theano $version"
+    puts stderr "  Category : Legacy"
+    puts stderr "  CUDA     : 12.9 (spack cuda-12.9.1, runtime libnvrtc.so for pygpu JIT)"
+    puts stderr "  Prefix   : $envpath"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \\\$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath   $envpath
+set spackcuda "$SPACK_CUDA"
+
+if { ![file isdirectory \$envpath] } {
+    puts stderr "AIStack/theano/$version: \$envpath does not exist"
+    break
+}
+
+setenv       CONDA_PREFIX       \$envpath
+setenv       CONDA_DEFAULT_ENV  $envname
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        \$envpath
+prepend-path PATH               \$envpath/bin
+prepend-path LD_LIBRARY_PATH    \$spackcuda/targets/x86_64-linux/lib
+EOF
+    echo "wrote $out"
+    WROTE=$((WROTE + 1))
+  fi
+fi
+
 # envname : modname : pip-show package : category : cuda version : display name
 #
 # modname is the exposed Lmod module name (module avail / module load).
@@ -190,7 +256,6 @@ declare -a ENTRIES=(
   "mlflow:mlflow:mlflow:Tracking:n/a (CPU-only, tracking service):MLflow"
   "pytorch-2.8:pytorch:torch:Legacy:12.6 (cu126 wheel index):PyTorch"
   "tensorflow-2.20:tensorflow:tensorflow:Legacy:bundled with pip package:TensorFlow GPU"
-  "theano-1.0:theano:theano:Legacy:n/a (GPU via pygpu/libgpuarray, not CUDA-indexed):Theano"
   "caffe-1.0:caffe:caffe:Legacy:n/a (GPU via caffe-gpu conda build):Caffe"
   "rapids-21.06:rapids:cudf:Legacy:11.2 (cudatoolkit=11.2):Rapids"
   "tensorrt-llm:tensorrt-llm:tensorrt_llm:Inference:bundled via NVIDIA pypi index:TensorRT-LLM"
