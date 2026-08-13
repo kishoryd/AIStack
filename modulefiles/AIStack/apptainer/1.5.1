@@ -1,0 +1,67 @@
+#%Module1.0
+#
+# AIStack :: Apptainer 1.5.1
+# Containers
+# CUDA: n/a (use --nv at exec/run time for GPU passthrough)
+#
+
+module-whatis "AIStack Apptainer 1.5.1 :: Containers, unprivileged, GPU via --nv"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  Apptainer 1.5.1 (unprivileged)"
+    puts stderr "  Category : Containers"
+    puts stderr "  Prefix   : /home/apps/apptainer"
+    puts stderr ""
+    puts stderr "  Not a conda env -- puts apptainer on PATH only. Load this"
+    puts stderr "  alongside any framework module if you also need it."
+    puts stderr ""
+    puts stderr "  GPU passthrough: pass --nv to exec/run/shell, e.g."
+    puts stderr "    apptainer exec --nv my_image.sif nvidia-smi"
+    puts stderr ""
+    puts stderr "  Compute nodes have no DNS/internet -- pull images on the"
+    puts stderr "  login node into a local .sif first, then run that file on"
+    puts stderr "  compute nodes:"
+    puts stderr "    apptainer pull my_image.sif docker://<image>"
+    puts stderr ""
+    puts stderr "  To confirm it loaded:"
+    puts stderr "    which apptainer"
+    puts stderr "    apptainer --version"
+    puts stderr ""
+}
+
+set root /home/apps/apptainer
+
+if { ![file isdirectory $root] } {
+    puts stderr "AIStack/apptainer/1.5.1: $root does not exist"
+    break
+}
+
+prepend-path PATH            $root/bin
+prepend-path PATH            $root/x86_64/bin
+prepend-path PATH            $root/x86_64/libexec/apptainer/bin
+prepend-path PATH            $root/x86_64/utils/bin
+
+# Also covers the GPU compute node fleet's missing libsubid.so.3 (its
+# shadow-utils package claims installed but the .so is absent from the
+# node image, fleet-wide, confirmed on 5 different nodes) -- as long as
+# this directory has a copy of it, apptainer starts fine regardless of
+# whether the node's own system copy is there.
+prepend-path LD_LIBRARY_PATH $root/x86_64/libexec/apptainer/lib
+
+# Cache/tmp must live on scratch (large image layers, /home is too small/
+# slow). $HOME mirrors the scratch layout on this cluster (/home/<org>/
+# <user> <-> /scratch/<org>/<user>), so derive the scratch base from
+# $HOME instead of assuming a flat /scratch/$USER -- that assumption
+# breaks for any account under an org subdirectory.
+if { [ info exists ::env(HOME) ] } {
+    regsub {^/home/} $env(HOME) {/scratch/} scratchbase
+    set cachedir $scratchbase/.apptainer/cache
+    set tmpdir   $scratchbase/.apptainer/tmp
+
+    file mkdir $cachedir
+    file mkdir $tmpdir
+
+    setenv APPTAINER_CACHEDIR $cachedir
+    setenv APPTAINER_TMPDIR   $tmpdir
+}
