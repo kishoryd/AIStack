@@ -2,16 +2,16 @@
 #
 # AIStack :: Theano 1.0.5
 # Legacy
-# CUDA: n/a (GPU via pygpu/libgpuarray, not CUDA-indexed)
+# CUDA: 12.9 (spack cuda-12.9.1, runtime libnvrtc.so for pygpu JIT)
 #
 
-module-whatis "AIStack Theano 1.0.5 :: Legacy, CUDA: n/a (GPU via pygpu/libgpuarray, not CUDA-indexed)"
+module-whatis "AIStack Theano 1.0.5 :: Legacy, CUDA: 12.9 (runtime libnvrtc.so for pygpu JIT)"
 
 proc ModulesHelp { } {
     puts stderr ""
     puts stderr "  Theano 1.0.5"
     puts stderr "  Category : Legacy"
-    puts stderr "  CUDA     : n/a (GPU via pygpu/libgpuarray, not CUDA-indexed)"
+    puts stderr "  CUDA     : 12.9 (spack cuda-12.9.1, runtime libnvrtc.so for pygpu JIT)"
     puts stderr "  Prefix   : /home/apps/miniconda/envs/theano-1.0"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
@@ -24,7 +24,8 @@ proc ModulesHelp { } {
 # swaps this one out instead of stacking PATH entries.
 family "condaenv"
 
-set envpath /home/apps/miniconda/envs/theano-1.0
+set envpath   /home/apps/miniconda/envs/theano-1.0
+set spackcuda "/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
 
 if { ![file isdirectory $envpath] } {
     puts stderr "AIStack/theano/1.0.5: $envpath does not exist"
@@ -36,3 +37,4 @@ setenv       CONDA_DEFAULT_ENV  theano-1.0
 setenv       CONDA_SHLVL        1
 setenv       VIRTUAL_ENV        $envpath
 prepend-path PATH               $envpath/bin
+prepend-path LD_LIBRARY_PATH    $spackcuda/targets/x86_64-linux/lib
