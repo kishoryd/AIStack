@@ -427,6 +427,12 @@ begin_env tensorrt-llm 3.10 && {
 # =============================================================================
 
 log "=== RAG: llamaindex ==="
+# llama-index-llms-huggingface pins transformers<5, and transformers 4.x
+# requires huggingface-hub<1.0 -- without pinning huggingface_hub here too,
+# pip resolves it to the latest 1.x (nothing else in this env caps it),
+# which breaks the import chain (sentence_transformers -> transformers ->
+# ImportError on huggingface-hub version check) even though the install
+# itself succeeds silently.
 begin_env llamaindex 3.11 && {
     install_common "llamaindex"
     pip_install_with_index llamaindex "$TORCH_CU130" "torch" "torchvision" "torchaudio"
@@ -443,7 +449,7 @@ begin_env llamaindex 3.11 && {
         "llama-index-postprocessor-flag-embedding-reranker" \
         "llama-index-readers-file" "llama-index-readers-web" \
         "llama-index-readers-database" "llama-index-readers-json" \
-        "sentence-transformers" "FlagEmbedding" "fastembed" \
+        "sentence-transformers" "FlagEmbedding" "fastembed" "huggingface_hub<1.0" \
         "chromadb" "qdrant-client" "pymilvus" \
         "pypdf" "psycopg2-binary" "pgvector" "redis" \
         "ragas" "deepeval" "trulens-eval" \
