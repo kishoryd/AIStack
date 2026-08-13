@@ -22,7 +22,7 @@ set -o pipefail
 # user to remember every time.
 if [[ -z "${SLURM_JOB_ID:-}" ]]; then
     echo "Not running under SLURM -- relaunching on a GPU node..."
-    exec srun --reservation=working_nodes --partition=gpu --gres=gpu:1 --time=01:00:00 \
+    exec srun --reservation=working_nodes --partition=gpu --gres=gpu:2 --time=01:00:00 \
         bash "$0" "$@"
 fi
 
@@ -98,29 +98,21 @@ import torch
 avail = torch.cuda.is_available()
 count = torch.cuda.device_count() if avail else 0
 names = " | ".join(torch.cuda.get_device_name(i) for i in range(count)) if avail else "N/A"
-# Compute capability — Ada Lovelace is sm_89 (RTX 4500/5000 Ada)
 caps = ""
 if avail:
     cc = [f"{torch.cuda.get_device_capability(i)[0]}.{torch.cuda.get_device_capability(i)[1]}" for i in range(count)]
     caps = " | ".join(cc)
-    ada = any(torch.cuda.get_device_capability(i)[0] >= 8 and torch.cuda.get_device_capability(i)[1] >= 9 for i in range(count))
-    print(f"available={avail} count={count} devices={names} caps={caps} ada={ada}")
+    print(f"available={avail} count={count} devices={names} caps={caps}")
 else:
-    print(f"available={avail} count={count} devices={names} caps=N/A ada=False")
+    print(f"available={avail} count={count} devices={names} caps=N/A")
 EOF
 )
     if echo "$result" | grep -q "available=True"; then
-        local count names caps ada_flag
+        local count names caps
         count=$(echo "$result"  | grep -oP 'count=\K[0-9]+')
         names=$(echo "$result"  | grep -oP 'devices=\K[^ ]+.*?(?= caps=)')
         caps=$(echo "$result"   | grep -oP 'caps=\K[^ ]+')
-        ada_flag=$(echo "$result" | grep -oP 'ada=\K\w+')
         log_pass "CUDA OK — $count GPU(s): $names (sm $caps)"
-        if [[ "$ada_flag" == "True" ]]; then
-            log_pass "Ada Lovelace (RTX 4500/5000 Ada) detected — sm_89"
-        else
-            log_warn "GPU detected but not Ada Lovelace series (sm_89). Found: $names"
-        fi
         return 0
     else
         log_fail "CUDA NOT available (torch.cuda.is_available() = False)"
