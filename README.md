@@ -109,9 +109,5 @@ fine-tune + tracking, submittable via `sbatch`).
   Defaults to `/home/apps/miniconda`; pass
   `/home/apps/MLDL/DL-CondaPy3.10` to run it against the MLDL base
   instead.
-- `remove_aistack_envs_from_mldl_conda.sh [--apply]` — dry-run by
-  default; removes any AIStack envs that ended up created inside the
-  MLDL conda base by mistake, without touching MLDL's own production
-  envs.
 
-Both need write access to the target conda base (`cdacapp01`).
+Needs write access to the target conda base (`cdacapp01`).
