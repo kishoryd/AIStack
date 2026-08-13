@@ -16,6 +16,13 @@ TRT_LLM_INDEX="https://pypi.nvidia.com"
 # cluster's actual GPU nodes (Cascade Lake Xeon, confirmed via lscpu).
 SPACK_GCC="/home/apps/spack/opt/spack/linux-cascadelake/gcc-12.5.0-2abo2si4ifm6qax4q4fyqc6hi4d4hq3e"
 SPACK_CUDA="/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
+# The system cmake (/usr/bin/cmake) is broken on this cluster (CMake
+# Error: Could not find CMAKE_ROOT -- confirmed via `cmake --version`
+# failing the same way outside any of our envs, not something we caused).
+# Use spack's instead of pip-installing one into each env, which also
+# sidesteps a real PATH-ordering bug that surfaced when pip's cmake
+# wheel wasn't put ahead of the (broken) system one.
+SPACK_CMAKE="/home/apps/spack/opt/spack/linux-cascadelake/cmake-3.31.12-e4on4cinv6qsx6b5km72edcvxj7yz2tj"
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
 DONE_DIR="$LOG_DIR/done"
@@ -341,7 +348,7 @@ begin_env deepspeed 3.11 && {
     pip_install_with_index deepspeed "$TORCH_CU128" "torch" "torchvision" "torchaudio"
     log "  Building deepspeed (spack gcc-12.5.0 + cuda-12.9.1 toolchain)..."
     if CUDA_HOME="$SPACK_CUDA" \
-       PATH="$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
+       PATH="$SPACK_CMAKE/bin:$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
        LD_LIBRARY_PATH="$SPACK_CUDA/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
        CC="$SPACK_GCC/bin/gcc" CXX="$SPACK_GCC/bin/g++" \
        "$CONDA_DIR/envs/deepspeed/bin/pip" install deepspeed mlflow \
@@ -398,11 +405,11 @@ begin_env llamacpp 3.11 && {
     install_common "llamacpp"
     log "  Building llama-cpp-python (spack gcc-12.5.0 + cuda-12.9.1 toolchain)..."
     if CUDA_HOME="$SPACK_CUDA" \
-       PATH="$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
+       PATH="$SPACK_CMAKE/bin:$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
        LD_LIBRARY_PATH="$SPACK_CUDA/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
        CC="$SPACK_GCC/bin/gcc" CXX="$SPACK_GCC/bin/g++" \
        CMAKE_ARGS="-DGGML_CUDA=on" \
-       "$CONDA_DIR/envs/llamacpp/bin/pip" install cmake llama-cpp-python mlflow \
+       "$CONDA_DIR/envs/llamacpp/bin/pip" install llama-cpp-python mlflow \
            >> "$LOG_DIR/llamacpp.log" 2>&1; then
         log_ok "llama-cpp-python"
     else
