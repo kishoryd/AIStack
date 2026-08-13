@@ -403,13 +403,22 @@ log "=== INFERENCE: llamacpp ==="
 # modulefile for this one is simpler than deepspeed's).
 begin_env llamacpp 3.11 && {
     install_common "llamacpp"
-    log "  Building llama-cpp-python (spack gcc-12.5.0 + cuda-12.9.1 toolchain)..."
+    log "  Installing scikit-build-core/ninja (own build deps, avoids pip auto-fetching its own cmake wheel)..."
+    "$CONDA_DIR/envs/llamacpp/bin/pip" install scikit-build-core ninja mlflow \
+        >> "$LOG_DIR/llamacpp.log" 2>&1
+    log "  Building llama-cpp-python (spack gcc-12.5.0 + cuda-12.9.1 + cmake-3.31.12, --no-build-isolation)..."
+    # --no-build-isolation is the actual fix here: without it, pip creates
+    # an isolated build env per llama-cpp-python's own build-system
+    # requirements and auto-fetches its own "cmake" wheel there (observed
+    # picking 3.26.5, a version with a known broken/missing bundled
+    # CMAKE_ROOT) -- completely bypassing whatever's on PATH. Forcing no
+    # isolation makes it use the toolchain we actually set up below.
     if CUDA_HOME="$SPACK_CUDA" \
        PATH="$SPACK_CMAKE/bin:$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
        LD_LIBRARY_PATH="$SPACK_CUDA/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
        CC="$SPACK_GCC/bin/gcc" CXX="$SPACK_GCC/bin/g++" \
        CMAKE_ARGS="-DGGML_CUDA=on" \
-       "$CONDA_DIR/envs/llamacpp/bin/pip" install llama-cpp-python mlflow \
+       "$CONDA_DIR/envs/llamacpp/bin/pip" install --no-build-isolation llama-cpp-python \
            >> "$LOG_DIR/llamacpp.log" 2>&1; then
         log_ok "llama-cpp-python"
     else
