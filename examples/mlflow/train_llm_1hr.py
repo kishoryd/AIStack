@@ -51,7 +51,11 @@ def main():
         mlflow.log_param("lr", 5e-4)
         mlflow.log_param("run_seconds", RUN_SECONDS)
         if device == "cuda":
-            mlflow.log_param("gpu_name", torch.cuda.get_device_name(0))
+            props = torch.cuda.get_device_properties(0)
+            mlflow.log_param("gpu_name", props.name)
+            mlflow.log_param("gpu_total_memory_gb", round(props.total_memory / 1e9, 1))
+            mlflow.log_param("gpu_compute_capability", f"{props.major}.{props.minor}")
+            mlflow.log_param("cuda_version", torch.version.cuda)
 
         start = time.time()
         last_log = start

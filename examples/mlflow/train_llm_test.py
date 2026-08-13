@@ -36,7 +36,11 @@ def main():
         mlflow.log_param("lr", 5e-4)
         mlflow.log_param("epochs", epochs)
         if device == "cuda":
-            mlflow.log_param("gpu_name", torch.cuda.get_device_name(0))
+            props = torch.cuda.get_device_properties(0)
+            mlflow.log_param("gpu_name", props.name)
+            mlflow.log_param("gpu_total_memory_gb", round(props.total_memory / 1e9, 1))
+            mlflow.log_param("gpu_compute_capability", f"{props.major}.{props.minor}")
+            mlflow.log_param("cuda_version", torch.version.cuda)
 
         for epoch in range(epochs):
             opt.zero_grad()
