@@ -588,10 +588,21 @@ begin_env rapids-21.06 3.7 && {
     # 12.0.1) with no coordination with cudf's ABI requirements, silently
     # breaking `import cudf` (ImportError: cannot import name
     # 'FileEncryptionProperties' from 'pyarrow._parquet') even though both
-    # installs individually report success. Re-pinning here on every run
-    # (idempotent re-runs are expected) guarantees the correct version
-    # wins regardless of what pip did before or after.
-    conda_install rapids-21.06 -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2 "pyarrow=1.0.1"
+    # installs individually report success.
+    #
+    # pip uninstall first, always: this conda build's pypi-interop layer
+    # ("conda-pypi beta") sees an existing pip-tracked pyarrow entry of
+    # the same name/version and silently no-ops the conda install instead
+    # of relinking its own files -- observed leaving a half-deleted
+    # pyarrow/ (pip's uninstall removed the files it owned, conda never
+    # replaced them) that fails with AttributeError: module 'pyarrow' has
+    # no attribute '__version__'. --force-reinstall makes conda relink
+    # every file from its package cache regardless of what it thinks is
+    # already there, so this is safe to run on every re-run.
+    "$CONDA_DIR/envs/rapids-21.06/bin/pip" uninstall -y pyarrow \
+        >> "$LOG_DIR/rapids-21.06.log" 2>&1 || true
+    conda_install rapids-21.06 -c rapidsai -c nvidia -c numba -c conda-forge \
+        cudf=21.06 cudatoolkit=11.2 "pyarrow=1.0.1" --force-reinstall
     register_kernel rapids-21.06 "Rapids (Python 3.7, AIStack)"
     [[ -z "${ENV_ERRORS[rapids-21.06]}" ]] && mark_done rapids-21.06
 }
