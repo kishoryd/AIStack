@@ -140,7 +140,15 @@ print(gpus)" >> "$LOG_DIR/${env}.log" 2>&1; then
 
 check_gpu_theano() {
     local env="$1"
-    if "$CONDA_DIR/envs/$env/bin/python" -c "
+    # theano-1.0 ships no cudatoolkit of its own -- pygpu needs libnvrtc.so
+    # from spack's CUDA at runtime, which is normally supplied by the
+    # AIStack/theano modulefile's LD_LIBRARY_PATH (not by this raw conda
+    # env). This test calls the env's python directly, bypassing Lmod
+    # entirely, so it has to set the same thing here or it fails even
+    # when the real module-loaded experience works fine.
+    local spackcuda="/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
+    if LD_LIBRARY_PATH="$spackcuda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
+       "$CONDA_DIR/envs/$env/bin/python" -c "
 import pygpu
 ctx = pygpu.init('cuda')
 print(ctx)" >> "$LOG_DIR/${env}.log" 2>&1; then
