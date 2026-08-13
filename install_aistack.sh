@@ -543,7 +543,10 @@ begin_env haystack 3.11 && {
 log "=== TRACKING: mlflow ==="
 begin_env mlflow 3.11 && {
     install_common "mlflow"
-    pip_install mlflow "mlflow" "sqlalchemy" "psutil"
+    # flask-wtf is only needed for `mlflow server --app-name basic-auth`
+    # (see fixes/mlflow.service) -- installed unconditionally so that
+    # capability is ready whether or not auth actually gets turned on.
+    pip_install mlflow "mlflow" "sqlalchemy" "psutil" "flask-wtf"
     register_kernel mlflow "MLflow (Python 3.11)"
     [[ -z "${ENV_ERRORS[mlflow]}" ]] && mark_done mlflow
 }

@@ -1,0 +1,7 @@
+[mlflow]
+default_permission = READ
+database_uri = sqlite:////home/apps/mlflow/basic_auth.db
+admin_username = admin
+admin_password = CHANGE_ME_BEFORE_DEPLOY
+authorization_function = mlflow.server.auth:authenticate_request_basic_auth
+grant_default_workspace_access = false

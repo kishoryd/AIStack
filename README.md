@@ -88,8 +88,66 @@ export MLFLOW_TRACKING_URI=http://<login-node-hostname>:5551
 `fixes/mlflow.service` calls the mlflow binary by absolute path
 (`/home/apps/miniconda/envs/mlflow/bin/mlflow`) since systemd services
 don't source the module system. `--host 0.0.0.0` opens it to the whole
-network, not just localhost — fine on an internal cluster network, but
-worth knowing since MLflow has no built-in auth.
+network, not just localhost.
+
+### Enabling authentication
+
+By default there's no auth at all — anyone who can reach the port has
+full read/write access to every experiment. MLflow ships a real
+basic-auth mode; `fixes/mlflow-auth.service` is a separate, opt-in unit
+for it (deliberately not baked into the plain `mlflow.service` above,
+since turning auth on breaks any client that isn't sending credentials —
+this should be a conscious cutover, not a silent behavior change).
+
+```bash
+# 1. generate a real secret key and set the admin password (do NOT
+#    commit either of these anywhere)
+python3 -c "import secrets; print(secrets.token_hex(32))"
+
+cp fixes/basic_auth.ini.template /home/apps/mlflow/basic_auth.ini
+# edit /home/apps/mlflow/basic_auth.ini: replace admin_password
+
+cat > /home/apps/mlflow/mlflow-auth.env <<EOF
+MLFLOW_AUTH_CONFIG_PATH=/home/apps/mlflow/basic_auth.ini
+MLFLOW_FLASK_SERVER_SECRET_KEY=<paste the generated secret key here>
+EOF
+chmod 600 /home/apps/mlflow/mlflow-auth.env   # contains the secret key
+
+# 2. cut over: stop the old no-auth service, start the auth one
+systemctl --user stop mlflow.service
+systemctl --user disable mlflow.service
+
+cp fixes/mlflow-auth.service ~/.config/systemd/user/mlflow-auth.service
+systemctl --user daemon-reload
+systemctl --user enable --now mlflow-auth.service
+systemctl --user status mlflow-auth.service
+```
+
+Once enabled, every client needs credentials — `default_permission =
+READ` in the template means a logged-in non-admin user can read
+everything but not write, until given explicit per-experiment
+permissions:
+
+```bash
+export MLFLOW_TRACKING_URI=http://<login-node-hostname>:5551
+export MLFLOW_TRACKING_USERNAME=admin
+export MLFLOW_TRACKING_PASSWORD=<the admin password you set>
+```
+
+To create real per-user accounts instead of sharing the admin login
+(`admin` can do this via the REST API — there's no `mlflow` CLI command
+for it yet):
+
+```bash
+curl -u admin:<admin-password> -X POST \
+  http://<login-node-hostname>:5551/api/2.0/mlflow/users/create \
+  -H "Content-Type: application/json" \
+  -d '{"username": "someuser", "password": "their-password"}'
+```
+
+Verified end-to-end before writing any of this down: unauthenticated
+and wrong-password requests both get `401`, correct credentials get
+`200`.
 
 ## Cleanup tools
 

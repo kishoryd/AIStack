@@ -1,0 +1,18 @@
+[Unit]
+Description=AIStack MLflow Tracking Server (basic-auth enabled)
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/home/apps/mlflow/mlflow-auth.env
+ExecStart=/home/apps/miniconda/envs/mlflow/bin/mlflow server \
+  --host 0.0.0.0 --port 5551 \
+  --app-name basic-auth \
+  --backend-store-uri sqlite:////home/apps/mlflow/mlflow.db \
+  --default-artifact-root /home/apps/mlflow/artifacts
+WorkingDirectory=/home/apps/mlflow
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -2,7 +2,8 @@
 # =============================================================================
 # AIStack Environment Test Suite
 # =============================================================================
-# Usage:
+# Usage (from the login node -- it re-launches itself on a GPU node via
+# srun automatically if not already inside a SLURM allocation):
 #   cd /home/apps/AIStack
 #   bash test_aistack.sh
 #
@@ -14,6 +15,16 @@
 # =============================================================================
 
 set -o pipefail
+
+# GPU checks are meaningless from the login node (no GPU there) -- if
+# we're not already inside a SLURM allocation, re-launch this same script
+# on a GPU compute node instead of just documenting that step for the
+# user to remember every time.
+if [[ -z "${SLURM_JOB_ID:-}" ]]; then
+    echo "Not running under SLURM -- relaunching on a GPU node..."
+    exec srun --reservation=working_nodes --partition=gpu --gres=gpu:1 --time=01:00:00 \
+        bash "$0" "$@"
+fi
 
 FORCE=0
 [[ "${1}" == "--force" ]] && FORCE=1
