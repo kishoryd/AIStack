@@ -123,10 +123,7 @@ systemctl --user enable --now mlflow-auth.service
 systemctl --user status mlflow-auth.service
 ```
 
-Once enabled, every client needs credentials — `default_permission =
-READ` in the template means a logged-in non-admin user can read
-everything but not write, until given explicit per-experiment
-permissions:
+Once enabled, every client needs credentials:
 
 ```bash
 export MLFLOW_TRACKING_URI=http://<login-node-hostname>:5551
@@ -134,9 +131,15 @@ export MLFLOW_TRACKING_USERNAME=admin
 export MLFLOW_TRACKING_PASSWORD=<the admin password you set>
 ```
 
-To create real per-user accounts instead of sharing the admin login
-(`admin` can do this via the REST API — there's no `mlflow` CLI command
-for it yet):
+**Visibility**: the template sets `default_permission = NO_PERMISSIONS`
+— each user's own experiments are private by default (verified: a
+different logged-in user gets `403` trying to read one directly, and it
+doesn't even show up in their experiment search results). Only the
+creator and `admin` can see an experiment until it's explicitly shared.
+
+To create real per-user accounts instead of everyone sharing the admin
+login (`admin` can do this via the REST API — there's no `mlflow` CLI
+command for it yet):
 
 ```bash
 curl -u admin:<admin-password> -X POST \
@@ -145,9 +148,22 @@ curl -u admin:<admin-password> -X POST \
   -d '{"username": "someuser", "password": "their-password"}'
 ```
 
-Verified end-to-end before writing any of this down: unauthenticated
-and wrong-password requests both get `401`, correct credentials get
-`200`.
+To share a specific experiment with a specific user (note this one's
+API version 3.0, not 2.0 like most other MLflow REST endpoints):
+
+```bash
+curl -u admin:<admin-password> -X POST \
+  http://<login-node-hostname>:5551/api/3.0/mlflow/users/permissions/grant \
+  -H "Content-Type: application/json" \
+  -d '{"username": "someuser", "resource_type": "experiment", "resource_id": "<experiment-id>", "permission": "READ"}'
+```
+
+`permission` can be `READ`, `EDIT`, `MANAGE`, or `NO_PERMISSIONS`
+(revoke). Verified end-to-end before writing any of this down:
+unauthenticated and wrong-password requests get `401`; with
+`NO_PERMISSIONS` as default, a second user gets `403` and can't see the
+experiment in search results at all; granting them `READ` makes it
+visible immediately.
 
 ## Cleanup tools
 
