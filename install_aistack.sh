@@ -274,7 +274,7 @@ log "=== FINETUNING: unsloth ==="
 begin_env unsloth 3.11 && {
     install_common "unsloth"
     pip_install_with_index unsloth "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install_extra unsloth "$TORCH_CU128" "ninja" "triton" "unsloth" "mlflow"
+    pip_install_extra unsloth "$TORCH_CU128" "ninja" "triton" "unsloth" "mlflow" "psutil" "pynvml"
     register_kernel unsloth "Unsloth (Python 3.11)"
     [[ -z "${ENV_ERRORS[unsloth]}" ]] && mark_done unsloth
 }
@@ -283,7 +283,7 @@ log "=== FINETUNING: transformers ==="
 begin_env transformers 3.11 && {
     install_common "transformers"
     pip_install_with_index transformers "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install_extra transformers "$TORCH_CU128" "transformers" "mlflow"
+    pip_install_extra transformers "$TORCH_CU128" "transformers" "mlflow" "psutil" "pynvml"
     register_kernel transformers "Transformers (Python 3.11)"
     [[ -z "${ENV_ERRORS[transformers]}" ]] && mark_done transformers
 }
@@ -292,7 +292,7 @@ log "=== FINETUNING: accelerate ==="
 begin_env accelerate 3.11 && {
     install_common "accelerate"
     pip_install_with_index accelerate "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install_extra accelerate "$TORCH_CU128" "accelerate" "mlflow"
+    pip_install_extra accelerate "$TORCH_CU128" "accelerate" "mlflow" "psutil" "pynvml"
     register_kernel accelerate "Accelerate (Python 3.11)"
     [[ -z "${ENV_ERRORS[accelerate]}" ]] && mark_done accelerate
 }
@@ -301,7 +301,7 @@ log "=== FINETUNING: trl ==="
 begin_env trl 3.11 && {
     install_common "trl"
     pip_install_with_index trl "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install_extra trl "$TORCH_CU128" "trl" "mlflow"
+    pip_install_extra trl "$TORCH_CU128" "trl" "mlflow" "psutil" "pynvml"
     register_kernel trl "TRL (Python 3.11)"
     [[ -z "${ENV_ERRORS[trl]}" ]] && mark_done trl
 }
@@ -310,7 +310,7 @@ log "=== FINETUNING: axolotl ==="
 begin_env axolotl 3.11 && {
     install_common "axolotl"
     pip_install_with_index axolotl "$TORCH_CU128" "torch" "torchaudio"
-    pip_install_extra axolotl "$TORCH_CU128" "ninja" "packaging" "axolotl[deepspeed]" "mlflow"
+    pip_install_extra axolotl "$TORCH_CU128" "ninja" "packaging" "axolotl[deepspeed]" "mlflow" "psutil" "pynvml"
     register_kernel axolotl "Axolotl (Python 3.11)"
     [[ -z "${ENV_ERRORS[axolotl]}" ]] && mark_done axolotl
 }
@@ -319,7 +319,7 @@ log "=== FINETUNING: llamafactory ==="
 begin_env llamafactory 3.11 && {
     install_common "llamafactory"
     pip_install_with_index llamafactory "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install_extra llamafactory "$TORCH_CU128" "ninja" "llamafactory[metrics]" "mlflow"
+    pip_install_extra llamafactory "$TORCH_CU128" "ninja" "llamafactory[metrics]" "mlflow" "psutil" "pynvml"
     register_kernel llamafactory "LLaMA-Factory (Python 3.11)"
     [[ -z "${ENV_ERRORS[llamafactory]}" ]] && mark_done llamafactory
 }
@@ -328,7 +328,7 @@ log "=== FINETUNING: torchtune ==="
 begin_env torchtune 3.11 && {
     install_common "torchtune"
     pip_install_with_index torchtune "$TORCH_CU128" "torch" "torchvision" "torchaudio" "torchao"
-    pip_install_extra torchtune "$TORCH_CU128" "torchtune" "mlflow"
+    pip_install_extra torchtune "$TORCH_CU128" "torchtune" "mlflow" "psutil" "pynvml"
     register_kernel torchtune "TorchTune (Python 3.11)"
     [[ -z "${ENV_ERRORS[torchtune]}" ]] && mark_done torchtune
 }
@@ -337,7 +337,7 @@ log "=== FINETUNING: nemo ==="
 begin_env nemo 3.11 && {
     install_common "nemo"
     pip_install_with_index nemo "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install_extra nemo "$TORCH_CU128" "nemo_toolkit[all]" "mlflow"
+    pip_install_extra nemo "$TORCH_CU128" "nemo_toolkit[all]" "mlflow" "psutil" "pynvml"
     register_kernel nemo "NVIDIA NeMo (Python 3.11)"
     [[ -z "${ENV_ERRORS[nemo]}" ]] && mark_done nemo
 }
@@ -351,7 +351,7 @@ begin_env deepspeed 3.11 && {
        PATH="$SPACK_CMAKE/bin:$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
        LD_LIBRARY_PATH="$SPACK_CUDA/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
        CC="$SPACK_GCC/bin/gcc" CXX="$SPACK_GCC/bin/g++" \
-       "$CONDA_DIR/envs/deepspeed/bin/pip" install deepspeed mlflow \
+       "$CONDA_DIR/envs/deepspeed/bin/pip" install deepspeed mlflow psutil pynvml \
            >> "$LOG_DIR/deepspeed.log" 2>&1; then
         log_ok "deepspeed"
     else
@@ -404,7 +404,7 @@ log "=== INFERENCE: llamacpp ==="
 begin_env llamacpp 3.11 && {
     install_common "llamacpp"
     log "  Installing scikit-build-core/ninja (own build deps, avoids pip auto-fetching its own cmake wheel)..."
-    "$CONDA_DIR/envs/llamacpp/bin/pip" install scikit-build-core ninja mlflow \
+    "$CONDA_DIR/envs/llamacpp/bin/pip" install scikit-build-core ninja mlflow psutil pynvml \
         >> "$LOG_DIR/llamacpp.log" 2>&1
     log "  Building llama-cpp-python (spack gcc-12.5.0 + cuda-12.9.1 + cmake-3.31.12, --no-build-isolation)..."
     # --no-build-isolation is the actual fix here: without it, pip creates
@@ -453,7 +453,7 @@ log "=== INFERENCE: tensorrt-llm ==="
 # whatever version it actually needs.
 begin_env tensorrt-llm 3.10 && {
     install_common "tensorrt-llm"
-    pip_install_extra tensorrt-llm "$TRT_LLM_INDEX" "tensorrt_llm" "mlflow"
+    pip_install_extra tensorrt-llm "$TRT_LLM_INDEX" "tensorrt_llm" "mlflow" "psutil" "pynvml"
     register_kernel tensorrt-llm "TensorRT-LLM (Python 3.10)"
     [[ -z "${ENV_ERRORS[tensorrt-llm]}" ]] && mark_done tensorrt-llm
 }
@@ -543,7 +543,7 @@ begin_env haystack 3.11 && {
 log "=== TRACKING: mlflow ==="
 begin_env mlflow 3.11 && {
     install_common "mlflow"
-    pip_install mlflow "mlflow" "sqlalchemy" "psutil"
+    pip_install mlflow "mlflow" "sqlalchemy" "psutil" "pynvml"
     register_kernel mlflow "MLflow (Python 3.11)"
     [[ -z "${ENV_ERRORS[mlflow]}" ]] && mark_done mlflow
 }
@@ -558,7 +558,7 @@ begin_env diffusion 3.11 && {
     pip_install_with_index diffusion "$TORCH_CU128" "torch" "torchvision" "torchaudio"
     pip_install_extra diffusion "$TORCH_CU128" \
         "diffusers" "transformers" "accelerate" "xformers" \
-        "invisible-watermark" "compel" "controlnet-aux" "mlflow"
+        "invisible-watermark" "compel" "controlnet-aux" "mlflow" "psutil" "pynvml"
     register_kernel diffusion "Diffusion Models (Python 3.11)"
     [[ -z "${ENV_ERRORS[diffusion]}" ]] && mark_done diffusion
 }
