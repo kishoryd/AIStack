@@ -274,7 +274,7 @@ log "=== FINETUNING: unsloth ==="
 begin_env unsloth 3.11 && {
     install_common "unsloth"
     pip_install_with_index unsloth "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install_extra unsloth "$TORCH_CU128" "ninja" "triton" "unsloth"
+    pip_install_extra unsloth "$TORCH_CU128" "ninja" "triton" "unsloth" "mlflow"
     register_kernel unsloth "Unsloth (Python 3.11)"
     [[ -z "${ENV_ERRORS[unsloth]}" ]] && mark_done unsloth
 }
