@@ -1,0 +1,55 @@
+#%Module1.0
+#
+# AIStack :: DeepSpeed 0.19.5
+# Finetuning
+# CUDA: 12.9 (spack gcc-12.5.0 + cuda-12.9.1, needed for op JIT builds)
+#
+
+module-whatis "AIStack DeepSpeed 0.19.5 :: Finetuning, CUDA: 12.9 (spack toolchain for op JIT builds)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  DeepSpeed 0.19.5"
+    puts stderr "  Category : Finetuning"
+    puts stderr "  CUDA     : 12.9 (spack gcc-12.5.0 + cuda-12.9.1)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/deepspeed"
+    puts stderr ""
+    puts stderr "  DeepSpeed JIT-compiles several ops (fused adam, transformer"
+    puts stderr "  kernels, ...) via nvcc/gcc the first time they're used, not"
+    puts stderr "  just at install time -- this module puts a matching compiler"
+    puts stderr "  toolchain on PATH so that still works at runtime."
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath   /home/apps/miniconda/envs/deepspeed
+set spackgcc  /home/apps/spack/opt/spack/linux-cascadelake/gcc-12.5.0-2abo2si4ifm6qax4q4fyqc6hi4d4hq3e
+set spackcuda /home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "AIStack/deepspeed/0.19.5: $envpath does not exist"
+    break
+}
+if { ![file isdirectory $spackcuda] } {
+    puts stderr "AIStack/deepspeed/0.19.5: $spackcuda does not exist -- op JIT builds will fail"
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  deepspeed
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+setenv       CUDA_HOME          $spackcuda
+setenv       CC                 $spackgcc/bin/gcc
+setenv       CXX                $spackgcc/bin/g++
+prepend-path PATH               $envpath/bin
+prepend-path PATH               $spackgcc/bin
+prepend-path PATH               $spackcuda/bin
+prepend-path LD_LIBRARY_PATH    $spackcuda/targets/x86_64-linux/lib

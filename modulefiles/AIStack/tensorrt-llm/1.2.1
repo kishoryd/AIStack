@@ -1,0 +1,38 @@
+#%Module1.0
+#
+# AIStack :: TensorRT-LLM 1.2.1
+# Inference
+# CUDA: bundled via NVIDIA pypi index
+#
+
+module-whatis "AIStack TensorRT-LLM 1.2.1 :: Inference, CUDA: bundled via NVIDIA pypi index"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  TensorRT-LLM 1.2.1"
+    puts stderr "  Category : Inference"
+    puts stderr "  CUDA     : bundled via NVIDIA pypi index"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/tensorrt-llm"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath /home/apps/miniconda/envs/tensorrt-llm
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "AIStack/tensorrt-llm/1.2.1: $envpath does not exist"
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  tensorrt-llm
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin
