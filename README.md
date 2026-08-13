@@ -90,19 +90,16 @@ export MLFLOW_TRACKING_URI=http://<login-node-hostname>:5551
 don't source the module system. `--host 0.0.0.0` opens it to the whole
 network, not just localhost.
 
-### Enabling authentication (LDAP)
+**No authentication is configured** — anyone who can reach the port has
+full read/write access to every experiment. It's reachable from the
+login node directly, and from anywhere else via an SSH tunnel
+(`ssh -L 5551:localhost:5551 <login-node>`) — the firewall blocks direct
+access from GPU compute nodes specifically (see `examples/mlflow/`),
+but does nothing to separate one cluster user's experiments from
+another's.
 
-By default there's no auth at all — anyone who can reach the port has
-full read/write access to every experiment. Access control is done via
-an nginx reverse proxy authenticating against this cluster's existing
-LDAP directory (`ldap://172.40.0.1 ldap://172.40.0.2`, base
-`dc=nsm,dc=in` — the same directory that already backs SSH logins, per
-`/etc/openldap/ldap.conf` and `nsswitch.conf`), not MLflow's own
-built-in basic-auth — this way everyone uses their existing cluster
-login, including whoever administers it, with no separate MLflow-only
-accounts to manage.
-
-*(setup steps land here once the proxy is built)*
+See `examples/mlflow/` for a working end-to-end smoke test (tiny model
+fine-tune + tracking, submittable via `sbatch`).
 
 ## Cleanup tools
 
