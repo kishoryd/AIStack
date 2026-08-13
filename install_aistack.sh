@@ -581,7 +581,17 @@ begin_env caffe-1.0 3.7 && {
 log "=== LEGACY: rapids-21.06 ==="
 begin_env rapids-21.06 3.7 && {
     install_common_legacy "rapids-21.06"
-    conda_install rapids-21.06 -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
+    # Pin pyarrow=1.0.1 in the same solve as cudf itself -- cudf=21.06's
+    # compiled extensions are built against that exact (CUDA-enabled)
+    # conda-forge pyarrow build. install_common_legacy just pip-installed
+    # "datasets" (COMMON_PKGS), which drags in a modern pyarrow (observed:
+    # 12.0.1) with no coordination with cudf's ABI requirements, silently
+    # breaking `import cudf` (ImportError: cannot import name
+    # 'FileEncryptionProperties' from 'pyarrow._parquet') even though both
+    # installs individually report success. Re-pinning here on every run
+    # (idempotent re-runs are expected) guarantees the correct version
+    # wins regardless of what pip did before or after.
+    conda_install rapids-21.06 -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2 "pyarrow=1.0.1"
     register_kernel rapids-21.06 "Rapids (Python 3.7, AIStack)"
     [[ -z "${ENV_ERRORS[rapids-21.06]}" ]] && mark_done rapids-21.06
 }
