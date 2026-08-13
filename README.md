@@ -90,80 +90,19 @@ export MLFLOW_TRACKING_URI=http://<login-node-hostname>:5551
 don't source the module system. `--host 0.0.0.0` opens it to the whole
 network, not just localhost.
 
-### Enabling authentication
+### Enabling authentication (LDAP)
 
 By default there's no auth at all — anyone who can reach the port has
-full read/write access to every experiment. MLflow ships a real
-basic-auth mode; `fixes/mlflow-auth.service` is a separate, opt-in unit
-for it (deliberately not baked into the plain `mlflow.service` above,
-since turning auth on breaks any client that isn't sending credentials —
-this should be a conscious cutover, not a silent behavior change).
+full read/write access to every experiment. Access control is done via
+an nginx reverse proxy authenticating against this cluster's existing
+LDAP directory (`ldap://172.40.0.1 ldap://172.40.0.2`, base
+`dc=nsm,dc=in` — the same directory that already backs SSH logins, per
+`/etc/openldap/ldap.conf` and `nsswitch.conf`), not MLflow's own
+built-in basic-auth — this way everyone uses their existing cluster
+login, including whoever administers it, with no separate MLflow-only
+accounts to manage.
 
-```bash
-# 1. generate a real secret key and set the admin password (do NOT
-#    commit either of these anywhere)
-python3 -c "import secrets; print(secrets.token_hex(32))"
-
-cp fixes/basic_auth.ini.template /home/apps/mlflow/basic_auth.ini
-# edit /home/apps/mlflow/basic_auth.ini: replace admin_password
-
-cat > /home/apps/mlflow/mlflow-auth.env <<EOF
-MLFLOW_AUTH_CONFIG_PATH=/home/apps/mlflow/basic_auth.ini
-MLFLOW_FLASK_SERVER_SECRET_KEY=<paste the generated secret key here>
-EOF
-chmod 600 /home/apps/mlflow/mlflow-auth.env   # contains the secret key
-
-# 2. cut over: stop the old no-auth service, start the auth one
-systemctl --user stop mlflow.service
-systemctl --user disable mlflow.service
-
-cp fixes/mlflow-auth.service ~/.config/systemd/user/mlflow-auth.service
-systemctl --user daemon-reload
-systemctl --user enable --now mlflow-auth.service
-systemctl --user status mlflow-auth.service
-```
-
-Once enabled, every client needs credentials:
-
-```bash
-export MLFLOW_TRACKING_URI=http://<login-node-hostname>:5551
-export MLFLOW_TRACKING_USERNAME=admin
-export MLFLOW_TRACKING_PASSWORD=<the admin password you set>
-```
-
-**Visibility**: the template sets `default_permission = NO_PERMISSIONS`
-— each user's own experiments are private by default (verified: a
-different logged-in user gets `403` trying to read one directly, and it
-doesn't even show up in their experiment search results). Only the
-creator and `admin` can see an experiment until it's explicitly shared.
-
-To create real per-user accounts instead of everyone sharing the admin
-login (`admin` can do this via the REST API — there's no `mlflow` CLI
-command for it yet):
-
-```bash
-curl -u admin:<admin-password> -X POST \
-  http://<login-node-hostname>:5551/api/2.0/mlflow/users/create \
-  -H "Content-Type: application/json" \
-  -d '{"username": "someuser", "password": "their-password"}'
-```
-
-To share a specific experiment with a specific user (note this one's
-API version 3.0, not 2.0 like most other MLflow REST endpoints):
-
-```bash
-curl -u admin:<admin-password> -X POST \
-  http://<login-node-hostname>:5551/api/3.0/mlflow/users/permissions/grant \
-  -H "Content-Type: application/json" \
-  -d '{"username": "someuser", "resource_type": "experiment", "resource_id": "<experiment-id>", "permission": "READ"}'
-```
-
-`permission` can be `READ`, `EDIT`, `MANAGE`, or `NO_PERMISSIONS`
-(revoke). Verified end-to-end before writing any of this down:
-unauthenticated and wrong-password requests get `401`; with
-`NO_PERMISSIONS` as default, a second user gets `403` and can't see the
-experiment in search results at all; granting them `READ` makes it
-visible immediately.
+*(setup steps land here once the proxy is built)*
 
 ## Cleanup tools
 
