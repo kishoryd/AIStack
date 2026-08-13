@@ -2,16 +2,16 @@
 #
 # AIStack :: TensorFlow GPU 2.20.0
 # Legacy
-# CUDA: bundled via tensorflow[and-cuda] pip extra
+# CUDA: bundled with pip package
 #
 
-module-whatis "AIStack TensorFlow GPU 2.20.0 :: Legacy, CUDA: bundled via tensorflow[and-cuda] pip extra"
+module-whatis "AIStack TensorFlow GPU 2.20.0 :: Legacy, CUDA: bundled with pip package"
 
 proc ModulesHelp { } {
     puts stderr ""
     puts stderr "  TensorFlow GPU 2.20.0"
     puts stderr "  Category : Legacy"
-    puts stderr "  CUDA     : bundled via tensorflow[and-cuda] pip extra"
+    puts stderr "  CUDA     : bundled with pip package"
     puts stderr "  Prefix   : /home/apps/miniconda/envs/tensorflow-2.20"
     puts stderr ""
     puts stderr "  This module does not change your shell prompt. To confirm it loaded:"

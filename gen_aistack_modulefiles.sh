@@ -189,7 +189,7 @@ declare -a ENTRIES=(
   "haystack:haystack:haystack-ai:RAG:13.0 (cu130 wheel index):Haystack"
   "mlflow:mlflow:mlflow:Tracking:n/a (CPU-only, tracking service):MLflow"
   "pytorch-2.8:pytorch:torch:Legacy:12.6 (cu126 wheel index):PyTorch"
-  "tensorflow-2.20:tensorflow:tensorflow:Legacy:bundled via tensorflow[and-cuda] pip extra:TensorFlow GPU"
+  "tensorflow-2.20:tensorflow:tensorflow:Legacy:bundled with pip package:TensorFlow GPU"
   "theano-1.0:theano:theano:Legacy:n/a (GPU via pygpu/libgpuarray, not CUDA-indexed):Theano"
   "caffe-1.0:caffe:caffe:Legacy:n/a (GPU via caffe-gpu conda build):Caffe"
   "rapids-21.06:rapids:cudf:Legacy:11.2 (cudatoolkit=11.2):Rapids"
