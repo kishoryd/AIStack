@@ -48,8 +48,48 @@ bash test_aistack.sh --force   # re-test everything
 
 Checks env existence, Python version, package imports, and GPU
 availability (`torch.cuda.is_available()` for torch-based envs;
-framework-native probes for TensorFlow/Theano/Caffe/RAPIDS). Run via
-`srun` with a GPU allocation for the GPU checks to mean anything.
+framework-native probes for TensorFlow/Theano/Caffe/RAPIDS). Run it from
+the login node — if it's not already inside a SLURM allocation, it
+re-launches itself on a GPU node via `srun` automatically, so the GPU
+checks are meaningful without you having to wrap it yourself.
+
+## MLflow tracking server
+
+`mlflow` (both the standalone env and bundled into most of the
+finetuning/RAG envs) is just the client library by default — no shared
+tracking server, no fixed `MLFLOW_TRACKING_URI`. Without one configured,
+each run just logs to a local `./mlruns/` directory wherever the script
+happens to run.
+
+For a real shared server everyone can log to and browse, run it as a
+`systemd --user` service (no root needed, and it survives logout/reboot,
+unlike a bare background process):
+
+```bash
+mkdir -p ~/.config/systemd/user
+mkdir -p /home/apps/mlflow/artifacts
+
+cp fixes/mlflow.service ~/.config/systemd/user/mlflow.service
+
+systemctl --user daemon-reload
+systemctl --user enable --now mlflow.service
+systemctl --user status mlflow.service
+
+# survive full logout, not just while a session is still open:
+loginctl enable-linger cdacapp01
+```
+
+Then every user points at it before logging runs:
+
+```bash
+export MLFLOW_TRACKING_URI=http://<login-node-hostname>:5551
+```
+
+`fixes/mlflow.service` calls the mlflow binary by absolute path
+(`/home/apps/miniconda/envs/mlflow/bin/mlflow`) since systemd services
+don't source the module system. `--host 0.0.0.0` opens it to the whole
+network, not just localhost — fine on an internal cluster network, but
+worth knowing since MLflow has no built-in auth.
 
 ## Cleanup tools
 
