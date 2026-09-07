@@ -44,7 +44,7 @@ def main():
 
     opt = torch.optim.AdamW(model.parameters(), lr=5e-4)
 
-    mlflow.set_experiment("aistack-smoke-test")
+    mlflow.set_experiment("dl-experiment")
     with mlflow.start_run(run_name=f"tiny-gpt2-1hr-{device}", log_system_metrics=True):
         mlflow.log_param("model", MODEL_NAME)
         mlflow.log_param("device", device)
