@@ -2,7 +2,8 @@
 # =============================================================================
 # AIStack Environment Test Suite
 # =============================================================================
-# Usage:
+# Usage (from the login node -- it re-launches itself on a GPU node via
+# srun automatically if not already inside a SLURM allocation):
 #   cd /home/apps/AIStack
 #   bash test_aistack.sh
 #
@@ -15,12 +16,22 @@
 
 set -o pipefail
 
+# GPU checks are meaningless from the login node (no GPU there) -- if
+# we're not already inside a SLURM allocation, re-launch this same script
+# on a GPU compute node instead of just documenting that step for the
+# user to remember every time.
+if [[ -z "${SLURM_JOB_ID:-}" ]]; then
+    echo "Not running under SLURM -- relaunching on a GPU node..."
+    exec srun --reservation=working_nodes --partition=gpu --gres=gpu:2 --time=01:00:00 \
+        bash "$0" "$@"
+fi
+
 FORCE=0
 [[ "${1}" == "--force" ]] && FORCE=1
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="/home/apps/miniconda3"
+CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/miniconda}"
 LOG_DIR="$AISTACK_DIR/logs/tests"
 SUMMARY_LOG="$LOG_DIR/test_summary.log"
 PASS_DIR="$AISTACK_DIR/logs/done/tests"   # sentinel: <env>.pass
@@ -87,32 +98,94 @@ import torch
 avail = torch.cuda.is_available()
 count = torch.cuda.device_count() if avail else 0
 names = " | ".join(torch.cuda.get_device_name(i) for i in range(count)) if avail else "N/A"
-# Compute capability — Ada Lovelace is sm_89 (RTX 4500/5000 Ada)
 caps = ""
 if avail:
     cc = [f"{torch.cuda.get_device_capability(i)[0]}.{torch.cuda.get_device_capability(i)[1]}" for i in range(count)]
     caps = " | ".join(cc)
-    ada = any(torch.cuda.get_device_capability(i)[0] >= 8 and torch.cuda.get_device_capability(i)[1] >= 9 for i in range(count))
-    print(f"available={avail} count={count} devices={names} caps={caps} ada={ada}")
+    print(f"available={avail} count={count} devices={names} caps={caps}")
 else:
-    print(f"available={avail} count={count} devices={names} caps=N/A ada=False")
+    print(f"available={avail} count={count} devices={names} caps=N/A")
 EOF
 )
     if echo "$result" | grep -q "available=True"; then
-        local count names caps ada_flag
+        local count names caps
         count=$(echo "$result"  | grep -oP 'count=\K[0-9]+')
         names=$(echo "$result"  | grep -oP 'devices=\K[^ ]+.*?(?= caps=)')
         caps=$(echo "$result"   | grep -oP 'caps=\K[^ ]+')
-        ada_flag=$(echo "$result" | grep -oP 'ada=\K\w+')
         log_pass "CUDA OK — $count GPU(s): $names (sm $caps)"
-        if [[ "$ada_flag" == "True" ]]; then
-            log_pass "Ada Lovelace (RTX 4500/5000 Ada) detected — sm_89"
-        else
-            log_warn "GPU detected but not Ada Lovelace series (sm_89). Found: $names"
-        fi
         return 0
     else
         log_fail "CUDA NOT available (torch.cuda.is_available() = False)"
+        return 1
+    fi
+}
+
+# GPU checks for the non-torch legacy frameworks -- check_cuda() only
+# covers torch-based envs, so tensorflow/theano/caffe/rapids need their
+# own framework-native GPU probe instead.
+check_gpu_tensorflow() {
+    local env="$1"
+    if "$CONDA_DIR/envs/$env/bin/python" -c "
+import tensorflow as tf
+gpus = tf.config.list_physical_devices('GPU')
+assert len(gpus) > 0
+print(gpus)" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — tf.config.list_physical_devices('GPU') non-empty"
+        return 0
+    else
+        log_fail "GPU NOT visible to TensorFlow"
+        return 1
+    fi
+}
+
+check_gpu_theano() {
+    local env="$1"
+    # theano-1.0 ships no cudatoolkit of its own -- pygpu needs libnvrtc.so
+    # from spack's CUDA at runtime, which is normally supplied by the
+    # AIStack/theano modulefile's LD_LIBRARY_PATH (not by this raw conda
+    # env). This test calls the env's python directly, bypassing Lmod
+    # entirely, so it has to set the same thing here or it fails even
+    # when the real module-loaded experience works fine.
+    local spackcuda="/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
+    if LD_LIBRARY_PATH="$spackcuda/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
+       "$CONDA_DIR/envs/$env/bin/python" -c "
+import pygpu
+ctx = pygpu.init('cuda')
+print(ctx)" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — pygpu.init('cuda') succeeded"
+        return 0
+    else
+        log_fail "GPU context init FAILED (pygpu)"
+        return 1
+    fi
+}
+
+check_gpu_caffe() {
+    local env="$1"
+    if "$CONDA_DIR/envs/$env/bin/python" -c "
+import caffe
+caffe.set_mode_gpu()
+caffe.set_device(0)
+print('ok')" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — caffe.set_mode_gpu()/set_device(0) succeeded"
+        return 0
+    else
+        log_fail "GPU mode FAILED (caffe)"
+        return 1
+    fi
+}
+
+check_gpu_rapids() {
+    local env="$1"
+    if "$CONDA_DIR/envs/$env/bin/python" -c "
+import cudf
+df = cudf.DataFrame({'a': [1, 2, 3]})
+assert df['a'].sum() == 6
+print('ok')" >> "$LOG_DIR/${env}.log" 2>&1; then
+        log_pass "GPU OK — cudf DataFrame op succeeded (requires live GPU)"
+        return 0
+    else
+        log_fail "GPU op FAILED (cudf)"
         return 1
     fi
 }
@@ -160,8 +233,19 @@ run_env_test() {
     check_python_version "$env" "$pyver" || env_failed+=("python-version")
 
     # ── 3. Package imports
+    #
+    # theano-1.0's default C-compiled linker JIT-compiles at import time
+    # via gcc -- GPU compute nodes on this cluster have no /usr/include at
+    # all (confirmed: glibc-headers/glibc-devel show installed in the RPM
+    # db, but every file is physically missing from the node image), which
+    # breaks *any* compiler, spack's included. Not an AIStack-fixable
+    # issue -- routed around it the same way the real modulefile does
+    # (gen_aistack_modulefiles.sh): force theano's pure-Python VM linker,
+    # which needs no C compiler at all.
+    local theano_flags=""
+    [[ "$env" == "theano-1.0" ]] && theano_flags="linker=vm,cxx="
     for pkg in $imports; do
-        if "$CONDA_DIR/envs/$env/bin/python" -c "import $pkg" \
+        if THEANO_FLAGS="$theano_flags" "$CONDA_DIR/envs/$env/bin/python" -c "import $pkg" \
                 >> "$LOG_DIR/${env}.log" 2>&1; then
             log_pass "import $pkg"
         else
@@ -170,9 +254,18 @@ run_env_test() {
         fi
     done
 
-    # ── 4. CUDA (only if torch in imports)
+    # ── 4. GPU check -- torch envs via check_cuda, non-torch legacy
+    # frameworks via their own framework-native probe.
     if echo "$imports" | grep -qw "torch"; then
         check_cuda "$env" || env_failed+=("cuda")
+    elif echo "$imports" | grep -qw "tensorflow"; then
+        check_gpu_tensorflow "$env" || env_failed+=("gpu")
+    elif echo "$imports" | grep -qw "theano"; then
+        check_gpu_theano "$env" || env_failed+=("gpu")
+    elif echo "$imports" | grep -qw "caffe"; then
+        check_gpu_caffe "$env" || env_failed+=("gpu")
+    elif echo "$imports" | grep -qw "cudf"; then
+        check_gpu_rapids "$env" || env_failed+=("gpu")
     fi
 
     # ── 5. Kernel
@@ -222,11 +315,11 @@ section "TRACKING"
 run_env_test mlflow       3.11 "mlflow sqlalchemy jupyter jupyterlab ipykernel"                             "MLflow"
 
 section "LEGACY"
-run_env_test pytorch  3.10 "torch torchvision jupyter jupyterlab ipykernel"  "PyTorch"
-run_env_test tensorflow   3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
-run_env_test Theano       3.8  "theano pygpu jupyter jupyterlab ipykernel"        "Theano"
-run_env_test Caffe        3.7  "caffe jupyter jupyterlab ipykernel"               "Caffe"
-run_env_test rapids       3.7  "cudf jupyter jupyterlab ipykernel"                "Rapids"
+run_env_test pytorch-2.8     3.10 "torch torchvision jupyter jupyterlab ipykernel"  "PyTorch"
+run_env_test tensorflow-2.20 3.10 "tensorflow jupyter jupyterlab ipykernel"          "TensorFlow GPU"
+run_env_test theano-1.0      3.8  "theano pygpu jupyter jupyterlab ipykernel"        "Theano"
+run_env_test caffe-1.0       3.7  "caffe jupyter jupyterlab ipykernel"               "Caffe"
+run_env_test rapids-21.06    3.7  "cudf jupyter jupyterlab ipykernel"                "Rapids"
 
 # =============================================================================
 # FINAL REPORT
@@ -236,7 +329,7 @@ ALL_ENVS=(
     vllm sglang lmdeploy rayserve tgi
     mlflow
     llamaindex langchain haystack
-    pytorch tensorflow Theano Caffe rapids
+    pytorch-2.8 tensorflow-2.20 theano-1.0 caffe-1.0 rapids-21.06
 )
 
 echo "" | tee -a "$SUMMARY_LOG"

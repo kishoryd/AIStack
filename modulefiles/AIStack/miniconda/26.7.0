@@ -1,0 +1,43 @@
+#%Module1.0
+#
+# AIStack :: miniconda 26.7.0
+# Base conda/python install, no framework -- for building a personal env.
+# CUDA: n/a
+#
+
+module-whatis "AIStack miniconda 26.7.0 :: base conda/python (no framework, CUDA n/a)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  miniconda 26.7.0 -- base conda/python install, no framework env."
+    puts stderr ""
+    puts stderr "  AIStack/* framework envs (unsloth, vllm, langchain, ...) are owned"
+    puts stderr "  by cdacapp01: usable by anyone, but not writable. If you need a"
+    puts stderr "  package that isn't already in one of those, build your own here:"
+    puts stderr ""
+    puts stderr "    module load AIStack/miniconda/26.7.0"
+    puts stderr "    conda create -n myenv python=3.11"
+    puts stderr "    conda activate myenv"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath /home/apps/miniconda
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "AIStack/miniconda/26.7.0: $envpath does not exist"
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  base
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin

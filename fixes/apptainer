@@ -1,0 +1,42 @@
+#%Module1.0#####################################################################
+##
+## Apptainer 1.5.1 modulefile
+##
+proc ModulesHelp { } {
+    puts stderr "Apptainer 1.5.1"
+    puts stderr "Adds Apptainer (unprivileged) to your environment."
+}
+
+module-whatis "Apptainer 1.5.1 (unprivileged install at /home/apps/apptainer)"
+
+set root /home/apps/apptainer
+
+prepend-path PATH            $root/bin
+prepend-path PATH            $root/x86_64/bin
+prepend-path PATH            $root/x86_64/libexec/apptainer/bin
+prepend-path PATH            $root/x86_64/utils/bin
+
+prepend-path LD_LIBRARY_PATH $root/x86_64/libexec/apptainer/lib
+
+# Cache/tmp must live on scratch (large image layers, /home is too small/
+# slow for this). $HOME mirrors the scratch layout on this cluster
+# (/home/<org>/<user> <-> /scratch/<org>/<user>), so derive the scratch
+# base from $HOME instead of assuming a flat /scratch/$USER -- that
+# assumption is wrong for any account under an org subdirectory (e.g.
+# /home/nsmapplication/dlapp -> /scratch/dlapp doesn't exist; the real
+# path is /scratch/nsmapplication/dlapp).
+if { [ info exists ::env(HOME) ] } {
+    regsub {^/home/} $env(HOME) {/scratch/} scratchbase
+    set cachedir $scratchbase/.apptainer/cache
+    set tmpdir   $scratchbase/.apptainer/tmp
+
+    # Previously just pointed at these paths without creating them --
+    # apptainer would fail on first real use ("Cache disabled - cache
+    # location /scratch is not writable" / FATAL unable to create tmp
+    # file) for any user who hadn't manually pre-created them.
+    file mkdir $cachedir
+    file mkdir $tmpdir
+
+    setenv APPTAINER_CACHEDIR $cachedir
+    setenv APPTAINER_TMPDIR   $tmpdir
+}

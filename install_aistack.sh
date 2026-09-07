@@ -2,9 +2,27 @@
 set -o pipefail
 
 AISTACK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONDA_DIR="/home/apps/miniconda3"
+CONDA_DIR="${AISTACK_CONDA_DIR:-/home/apps/miniconda}"
 TORCH_CU128="https://download.pytorch.org/whl/cu128"
 TORCH_CU130="https://download.pytorch.org/whl/cu130"
+TRT_LLM_INDEX="https://pypi.nvidia.com"
+
+# DeepSpeed JIT-compiles several ops (fused adam, transformer kernels, ...)
+# via nvcc/gcc at first *use*, not just at install time -- both the install
+# step and the deployed modulefile need a real CUDA compiler toolchain on
+# PATH, which conda itself doesn't provide. gcc-12.5.0 is within CUDA
+# 12.x's supported host-compiler range, and cuda-12.9.1 covers the same
+# 12.x ABI as the cu128 torch wheel used everywhere else. Picked for this
+# cluster's actual GPU nodes (Cascade Lake Xeon, confirmed via lscpu).
+SPACK_GCC="/home/apps/spack/opt/spack/linux-cascadelake/gcc-12.5.0-2abo2si4ifm6qax4q4fyqc6hi4d4hq3e"
+SPACK_CUDA="/home/apps/spack/opt/spack/linux-cascadelake/cuda-12.9.1-cl6xkxoxd64xi53nykj7k7bjzaadg7iw"
+# The system cmake (/usr/bin/cmake) is broken on this cluster (CMake
+# Error: Could not find CMAKE_ROOT -- confirmed via `cmake --version`
+# failing the same way outside any of our envs, not something we caused).
+# Use spack's instead of pip-installing one into each env, which also
+# sidesteps a real PATH-ordering bug that surfaced when pip's cmake
+# wheel wasn't put ahead of the (broken) system one.
+SPACK_CMAKE="/home/apps/spack/opt/spack/linux-cascadelake/cmake-3.31.12-e4on4cinv6qsx6b5km72edcvxj7yz2tj"
 LOG_DIR="$AISTACK_DIR/logs"
 SUMMARY_LOG="$LOG_DIR/install_summary.log"
 DONE_DIR="$LOG_DIR/done"
@@ -72,6 +90,35 @@ pip_install_with_index() {
     [[ ${#failed[@]} -gt 0 ]] && ENV_ERRORS[$env]="${ENV_ERRORS[$env]} ${failed[*]}"
 }
 
+# Like pip_install(), but also offers the CUDA wheel index as an *extra*
+# source (default PyPI stays primary). Use this for anything installed
+# AFTER a GPU torch build in the same env: several of these packages list
+# "torch" as a plain dependency, and without the extra index pip's resolver
+# can silently pull a fresh CPU-only torch from PyPI to satisfy it,
+# clobbering the CUDA build we just installed. Per PEP 440, a local version
+# segment (e.g. 2.8.0+cu128) outranks the bare 2.8.0 from PyPI, so as long
+# as the CUDA index is visible pip keeps the GPU wheel.
+pip_install_extra() {
+    local env="$1"; local extra_index_url="$2"; shift 2
+    local failed=()
+    for pkg in "$@"; do
+        local mod
+        mod=$(echo "$pkg" | sed 's/\[.*\]//' | sed 's/-/_/g' | awk '{print $1}')
+        if pkg_installed "$env" "$mod"; then
+            log_skip "already installed: $pkg (env: $env)"
+            continue
+        fi
+        log "  pip install $pkg --extra-index-url $extra_index_url (env: $env)"
+        if "$CONDA_DIR/envs/$env/bin/pip" install $pkg --extra-index-url "$extra_index_url" >> "$LOG_DIR/${env}.log" 2>&1; then
+            log_ok "$pkg"
+        else
+            log_err "$pkg FAILED"
+            failed+=("$pkg")
+        fi
+    done
+    [[ ${#failed[@]} -gt 0 ]] && ENV_ERRORS[$env]="${ENV_ERRORS[$env]} ${failed[*]}"
+}
+
 conda_install() {
     local env="$1"; shift
     log "  conda install $* (env: $env)"
@@ -79,6 +126,34 @@ conda_install() {
         >> "$LOG_DIR/${env}.log" 2>&1 \
         && log_ok "$*" \
         || { log_err "$* FAILED"; ENV_ERRORS[$env]="${ENV_ERRORS[$env]} $*"; }
+}
+
+# Baseline packages every env gets, on top of its own framework-specific
+# installs, so any general-purpose project (not just the framework's own
+# use case) can run in that env without hunting for a different one.
+# Mix of classic data-science stack + packages that show up in most
+# current (2026) AI/ML work regardless of which framework the env is for.
+COMMON_PKGS=(
+    numpy pandas matplotlib scikit-learn scipy tqdm requests pyyaml
+    huggingface_hub datasets pillow einops safetensors
+    wandb torch-tb-profiler psutil pynvml
+)
+
+install_common() {
+    local env="$1"
+    pip_install "$env" "${COMMON_PKGS[@]}"
+}
+
+# For envs pinned to Python <3.9 (theano-1.0, caffe-1.0, rapids-21.06):
+# safetensors dropped prebuilt wheels for these interpreters starting with
+# 0.5.x, and its sdist build now bootstraps Rust via "puccinialin", which
+# itself requires Python >=3.9 -- an unbuildable dead end on these envs
+# regardless of any compiler toolchain. Pin to the last version with cp37/
+# cp38 wheels instead of the bare "safetensors" every other env gets.
+install_common_legacy() {
+    local env="$1"
+    local pkgs=("${COMMON_PKGS[@]/safetensors/safetensors<0.5}")
+    pip_install "$env" "${pkgs[@]}"
 }
 
 conda_create() {
@@ -129,14 +204,48 @@ begin_env() {
 # =============================================================================
 # STEP 1 — MINICONDA
 # =============================================================================
+# Deliberately a *separate* install from /home/apps/MLDL/DL-CondaPy3.10 (the
+# production MLDL conda base) -- keeps AIStack fully isolated from those
+# already-working, GPU-verified envs. It also sidesteps whatever produced
+# a broken libcrypto.so.3 there (conda's binary prefix-replacement step
+# corrupting openssl on every new env in that base): that conda was built
+# through some internal Anaconda croot/build-farm pipeline (visible in its
+# has_prefix placeholder paths), which a plain upstream Miniconda installer
+# doesn't go through.
 log "=== AIStack Installer — $(date) ==="
 
 if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
-    log "Downloading Miniconda..."
-    wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-        -O /tmp/miniconda.sh
+    MINICONDA_SH="/tmp/miniconda-$$.sh"
+    MINICONDA_OK=0
+    for attempt in 1 2 3; do
+        log "Downloading Miniconda (attempt $attempt/3)..."
+        rm -f "$MINICONDA_SH"
+        if wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+                -O "$MINICONDA_SH" \
+            && [[ $(stat -c%s "$MINICONDA_SH" 2>/dev/null || echo 0) -gt 50000000 ]]; then
+            MINICONDA_OK=1
+            break
+        fi
+        log_err "Download attempt $attempt failed or file too small ($(stat -c%s "$MINICONDA_SH" 2>/dev/null || echo 0) bytes) — retrying"
+        sleep 3
+    done
+
+    if [[ $MINICONDA_OK -ne 1 ]]; then
+        echo "FATAL: could not download Miniconda after 3 attempts. Check network/DNS (must run from the login node)." >&2
+        exit 1
+    fi
+
     log "Installing Miniconda to $CONDA_DIR..."
-    bash /tmp/miniconda.sh -b -p "$CONDA_DIR"
+    if ! bash "$MINICONDA_SH" -b -p "$CONDA_DIR"; then
+        echo "FATAL: Miniconda installer failed — see above." >&2
+        exit 1
+    fi
+    rm -f "$MINICONDA_SH"
+
+    if [[ ! -f "$CONDA_DIR/bin/conda" ]]; then
+        echo "FATAL: Miniconda installer reported success but $CONDA_DIR/bin/conda is missing." >&2
+        exit 1
+    fi
 else
     log_skip "Miniconda already at $CONDA_DIR"
 fi
@@ -163,58 +272,94 @@ log "Installing uv in base env..."
 
 log "=== FINETUNING: unsloth ==="
 begin_env unsloth 3.11 && {
+    install_common "unsloth"
     pip_install_with_index unsloth "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install unsloth "ninja" "triton" "unsloth"
+    pip_install_extra unsloth "$TORCH_CU128" "ninja" "triton" "unsloth" "mlflow" "psutil" "pynvml"
     register_kernel unsloth "Unsloth (Python 3.11)"
     [[ -z "${ENV_ERRORS[unsloth]}" ]] && mark_done unsloth
 }
 
 log "=== FINETUNING: transformers ==="
 begin_env transformers 3.11 && {
+    install_common "transformers"
     pip_install_with_index transformers "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install transformers "transformers" "mlflow"
+    pip_install_extra transformers "$TORCH_CU128" "transformers" "mlflow" "psutil" "pynvml"
     register_kernel transformers "Transformers (Python 3.11)"
     [[ -z "${ENV_ERRORS[transformers]}" ]] && mark_done transformers
 }
 
 log "=== FINETUNING: accelerate ==="
 begin_env accelerate 3.11 && {
+    install_common "accelerate"
     pip_install_with_index accelerate "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install accelerate "accelerate" "mlflow"
+    pip_install_extra accelerate "$TORCH_CU128" "accelerate" "mlflow" "psutil" "pynvml"
     register_kernel accelerate "Accelerate (Python 3.11)"
     [[ -z "${ENV_ERRORS[accelerate]}" ]] && mark_done accelerate
 }
 
 log "=== FINETUNING: trl ==="
 begin_env trl 3.11 && {
+    install_common "trl"
     pip_install_with_index trl "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install trl "trl" "mlflow"
+    pip_install_extra trl "$TORCH_CU128" "trl" "mlflow" "psutil" "pynvml"
     register_kernel trl "TRL (Python 3.11)"
     [[ -z "${ENV_ERRORS[trl]}" ]] && mark_done trl
 }
 
 log "=== FINETUNING: axolotl ==="
 begin_env axolotl 3.11 && {
+    install_common "axolotl"
     pip_install_with_index axolotl "$TORCH_CU128" "torch" "torchaudio"
-    pip_install axolotl "ninja" "packaging" "axolotl[deepspeed]" "mlflow"
+    pip_install_extra axolotl "$TORCH_CU128" "ninja" "packaging" "axolotl[deepspeed]" "mlflow" "psutil" "pynvml"
     register_kernel axolotl "Axolotl (Python 3.11)"
     [[ -z "${ENV_ERRORS[axolotl]}" ]] && mark_done axolotl
 }
 
 log "=== FINETUNING: llamafactory ==="
 begin_env llamafactory 3.11 && {
+    install_common "llamafactory"
     pip_install_with_index llamafactory "$TORCH_CU128" "torch" "torchvision" "torchaudio"
-    pip_install llamafactory "ninja" "llamafactory[metrics]" "mlflow"
+    pip_install_extra llamafactory "$TORCH_CU128" "ninja" "llamafactory[metrics]" "mlflow" "psutil" "pynvml"
     register_kernel llamafactory "LLaMA-Factory (Python 3.11)"
     [[ -z "${ENV_ERRORS[llamafactory]}" ]] && mark_done llamafactory
 }
 
 log "=== FINETUNING: torchtune ==="
 begin_env torchtune 3.11 && {
+    install_common "torchtune"
     pip_install_with_index torchtune "$TORCH_CU128" "torch" "torchvision" "torchaudio" "torchao"
-    pip_install torchtune "torchtune" "mlflow"
+    pip_install_extra torchtune "$TORCH_CU128" "torchtune" "mlflow" "psutil" "pynvml"
     register_kernel torchtune "TorchTune (Python 3.11)"
     [[ -z "${ENV_ERRORS[torchtune]}" ]] && mark_done torchtune
+}
+
+log "=== FINETUNING: nemo ==="
+begin_env nemo 3.11 && {
+    install_common "nemo"
+    pip_install_with_index nemo "$TORCH_CU128" "torch" "torchvision" "torchaudio"
+    pip_install_extra nemo "$TORCH_CU128" "nemo_toolkit[all]" "mlflow" "psutil" "pynvml"
+    register_kernel nemo "NVIDIA NeMo (Python 3.11)"
+    [[ -z "${ENV_ERRORS[nemo]}" ]] && mark_done nemo
+}
+
+log "=== FINETUNING: deepspeed ==="
+begin_env deepspeed 3.11 && {
+    install_common "deepspeed"
+    pip_install_with_index deepspeed "$TORCH_CU128" "torch" "torchvision" "torchaudio"
+    log "  Building deepspeed (spack gcc-12.5.0 + cuda-12.9.1 toolchain)..."
+    if CUDA_HOME="$SPACK_CUDA" \
+       PATH="$SPACK_CMAKE/bin:$SPACK_GCC/bin:$SPACK_CUDA/bin:$PATH" \
+       LD_LIBRARY_PATH="$SPACK_CUDA/targets/x86_64-linux/lib:${LD_LIBRARY_PATH:-}" \
+       CC="$SPACK_GCC/bin/gcc" CXX="$SPACK_GCC/bin/g++" \
+       "$CONDA_DIR/envs/deepspeed/bin/pip" install deepspeed mlflow psutil pynvml \
+           >> "$LOG_DIR/deepspeed.log" 2>&1; then
+        log_ok "deepspeed"
+    else
+        log_err "deepspeed FAILED"
+        ENV_ERRORS[deepspeed]="${ENV_ERRORS[deepspeed]} deepspeed"
+    fi
+    register_kernel deepspeed "DeepSpeed (Python 3.11)"
+    [[ -z "${ENV_ERRORS[deepspeed]}" ]] && mark_done deepspeed
 }
 
 # =============================================================================
@@ -223,42 +368,58 @@ begin_env torchtune 3.11 && {
 
 log "=== INFERENCE: vllm ==="
 begin_env vllm 3.11 && {
+    install_common "vllm"
     pip_install_with_index vllm "$TORCH_CU130" "torch"
-    pip_install vllm "vllm"
+    pip_install_extra vllm "$TORCH_CU130" "vllm"
     register_kernel vllm "vLLM (Python 3.11)"
     [[ -z "${ENV_ERRORS[vllm]}" ]] && mark_done vllm
 }
 
 log "=== INFERENCE: sglang ==="
 begin_env sglang 3.11 && {
+    install_common "sglang"
     pip_install_with_index sglang "$TORCH_CU130" "torch"
-    pip_install sglang "sglang[all]"
+    pip_install_extra sglang "$TORCH_CU130" "sglang[all]"
     register_kernel sglang "SGLang (Python 3.11)"
     [[ -z "${ENV_ERRORS[sglang]}" ]] && mark_done sglang
 }
 
 log "=== INFERENCE: lmdeploy ==="
 begin_env lmdeploy 3.11 && {
+    install_common "lmdeploy"
     pip_install_with_index lmdeploy "$TORCH_CU130" "torch"
-    pip_install lmdeploy "lmdeploy"
+    pip_install_extra lmdeploy "$TORCH_CU130" "lmdeploy"
     register_kernel lmdeploy "LMDeploy (Python 3.11)"
     [[ -z "${ENV_ERRORS[lmdeploy]}" ]] && mark_done lmdeploy
 }
 
 log "=== INFERENCE: rayserve ==="
 begin_env rayserve 3.11 && {
+    install_common "rayserve"
     pip_install_with_index rayserve "$TORCH_CU130" "torch"
-    pip_install rayserve "ray[serve,air,tune]" "vllm"
+    pip_install_extra rayserve "$TORCH_CU130" "ray[serve,air,tune]" "vllm"
     register_kernel rayserve "Ray Serve (Python 3.11)"
     [[ -z "${ENV_ERRORS[rayserve]}" ]] && mark_done rayserve
 }
 
 log "=== INFERENCE: tgi ==="
 begin_env tgi 3.11 && {
+    install_common "tgi"
     pip_install_with_index tgi "$TORCH_CU130" "torch" "torchvision" "torchaudio"
-    pip_install tgi "text-generation"
+    pip_install_extra tgi "$TORCH_CU130" "text-generation"
     register_kernel tgi "TGI (Python 3.11)"
     [[ -z "${ENV_ERRORS[tgi]}" ]] && mark_done tgi
+}
+
+log "=== INFERENCE: tensorrt-llm ==="
+# NVIDIA ships tensorrt_llm through its own pypi index with its own pinned
+# torch dependency -- don't pre-install torch ourselves, let it pull
+# whatever version it actually needs.
+begin_env tensorrt-llm 3.10 && {
+    install_common "tensorrt-llm"
+    pip_install_extra tensorrt-llm "$TRT_LLM_INDEX" "tensorrt_llm" "mlflow" "psutil" "pynvml"
+    register_kernel tensorrt-llm "TensorRT-LLM (Python 3.10)"
+    [[ -z "${ENV_ERRORS[tensorrt-llm]}" ]] && mark_done tensorrt-llm
 }
 
 # =============================================================================
@@ -266,9 +427,16 @@ begin_env tgi 3.11 && {
 # =============================================================================
 
 log "=== RAG: llamaindex ==="
+# llama-index-llms-huggingface pins transformers<5, and transformers 4.x
+# requires huggingface-hub<1.0 -- without pinning huggingface_hub here too,
+# pip resolves it to the latest 1.x (nothing else in this env caps it),
+# which breaks the import chain (sentence_transformers -> transformers ->
+# ImportError on huggingface-hub version check) even though the install
+# itself succeeds silently.
 begin_env llamaindex 3.11 && {
+    install_common "llamaindex"
     pip_install_with_index llamaindex "$TORCH_CU130" "torch" "torchvision" "torchaudio"
-    pip_install llamaindex \
+    pip_install_extra llamaindex "$TORCH_CU130" \
         "llama-index" "llama-index-core" \
         "llama-index-llms-huggingface" "llama-index-llms-openai" \
         "llama-index-llms-ollama" "llama-index-llms-vllm" \
@@ -281,7 +449,7 @@ begin_env llamaindex 3.11 && {
         "llama-index-postprocessor-flag-embedding-reranker" \
         "llama-index-readers-file" "llama-index-readers-web" \
         "llama-index-readers-database" "llama-index-readers-json" \
-        "sentence-transformers" "FlagEmbedding" "fastembed" \
+        "sentence-transformers" "FlagEmbedding" "fastembed" "huggingface_hub<1.0" \
         "chromadb" "qdrant-client" "pymilvus" \
         "pypdf" "psycopg2-binary" "pgvector" "redis" \
         "ragas" "deepeval" "trulens-eval" \
@@ -293,8 +461,9 @@ begin_env llamaindex 3.11 && {
 
 log "=== RAG: langchain ==="
 begin_env langchain 3.11 && {
+    install_common "langchain"
     pip_install_with_index langchain "$TORCH_CU130" "torch" "torchvision" "torchaudio"
-    pip_install langchain \
+    pip_install_extra langchain "$TORCH_CU130" \
         "langchain" "langchain-core" "langchain-community" \
         "langchain-text-splitters" \
         "langchain-huggingface" "langchain-openai" "langchain-ollama" \
@@ -319,8 +488,9 @@ begin_env langchain 3.11 && {
 
 log "=== RAG: haystack ==="
 begin_env haystack 3.11 && {
+    install_common "haystack"
     pip_install_with_index haystack "$TORCH_CU130" "torch" "torchvision" "torchaudio"
-    pip_install haystack \
+    pip_install_extra haystack "$TORCH_CU130" \
         "haystack-ai" "huggingface_hub" "openai" "haystack-ai[inference]" \
         "chroma-haystack" "qdrant-haystack" "milvus-haystack" \
         "pgvector-haystack" "elasticsearch-haystack" \
@@ -342,61 +512,111 @@ begin_env haystack 3.11 && {
 
 log "=== TRACKING: mlflow ==="
 begin_env mlflow 3.11 && {
-    pip_install mlflow "mlflow" "sqlalchemy" "psutil"
+    install_common "mlflow"
+    pip_install mlflow "mlflow" "sqlalchemy" "psutil" "pynvml"
     register_kernel mlflow "MLflow (Python 3.11)"
     [[ -z "${ENV_ERRORS[mlflow]}" ]] && mark_done mlflow
 }
 
 # =============================================================================
-# LEGACY
+# GENERATION
 # =============================================================================
 
-log "=== LEGACY: pytorch ==="
-begin_env pytorch 3.10 && {
-    pip_install_with_index pytorch "https://download.pytorch.org/whl/cu126" \
-        "torch" "torchvision"
-    register_kernel pytorch "PyTorch (Python 3.10)"
-    [[ -z "${ENV_ERRORS[pytorch]}" ]] && mark_done pytorch
+log "=== GENERATION: diffusion ==="
+begin_env diffusion 3.11 && {
+    install_common "diffusion"
+    pip_install_with_index diffusion "$TORCH_CU128" "torch" "torchvision" "torchaudio"
+    pip_install_extra diffusion "$TORCH_CU128" \
+        "diffusers" "transformers" "accelerate" "xformers" \
+        "invisible-watermark" "compel" "controlnet-aux" "mlflow" "psutil" "pynvml"
+    register_kernel diffusion "Diffusion Models (Python 3.11)"
+    [[ -z "${ENV_ERRORS[diffusion]}" ]] && mark_done diffusion
 }
 
-log "=== LEGACY: tensorflow ==="
-begin_env tensorflow 3.10 && {
-    pip_install tensorflow "tensorflow[and-cuda]"
-    register_kernel tensorflow "TensorFlow GPU (Python 3.10)"
-    [[ -z "${ENV_ERRORS[tensorflow]}" ]] && mark_done tensorflow
+# =============================================================================
+# LEGACY
+# =============================================================================
+# Named after their pinned version (pytorch-2.8, theano-1.0, ...) rather than
+# the bare framework name: this AIStack conda base is separate from
+# /home/apps/MLDL/DL-CondaPy3.10 (which already has its own production
+# "Theano"/"Caffe"/etc. envs, GPU-verified earlier), so there's no actual
+# name collision risk here anymore -- kept the specific naming anyway since
+# it also documents exactly which version you get, and re-running with a
+# different pin later won't silently overwrite the old one.
+
+log "=== LEGACY: pytorch-2.8 ==="
+begin_env pytorch-2.8 3.10 && {
+    install_common "pytorch-2.8"
+    pip_install_with_index pytorch-2.8 "https://download.pytorch.org/whl/cu126" \
+        "torch==2.8.0+cu126" "torchvision==0.23.0+cu126"
+    register_kernel pytorch-2.8 "PyTorch (Python 3.10, AIStack)"
+    [[ -z "${ENV_ERRORS[pytorch-2.8]}" ]] && mark_done pytorch-2.8
 }
 
-log "=== LEGACY: Theano ==="
-begin_env Theano 3.8 && {
-    conda_install Theano -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
-    conda_install Theano mkl-service
-    register_kernel Theano "Theano (Python 3.8)"
-    [[ -z "${ENV_ERRORS[Theano]}" ]] && mark_done Theano
+log "=== LEGACY: tensorflow-2.20 ==="
+begin_env tensorflow-2.20 3.10 && {
+    install_common "tensorflow-2.20"
+    pip_install tensorflow-2.20 "tensorflow[and-cuda]==2.20.0"
+    register_kernel tensorflow-2.20 "TensorFlow GPU (Python 3.10, AIStack)"
+    [[ -z "${ENV_ERRORS[tensorflow-2.20]}" ]] && mark_done tensorflow-2.20
 }
 
-log "=== LEGACY: Caffe ==="
-begin_env Caffe 3.7 && {
-    conda_install Caffe -c anaconda caffe-gpu
-    register_kernel Caffe "Caffe (Python 3.7)"
-    [[ -z "${ENV_ERRORS[Caffe]}" ]] && mark_done Caffe
+log "=== LEGACY: theano-1.0 ==="
+begin_env theano-1.0 3.8 && {
+    install_common_legacy "theano-1.0"
+    conda_install theano-1.0 -c conda-forge theano=1.0.5 pygpu=0.7.6 "numpy<1.24" python=3.8
+    conda_install theano-1.0 mkl-service
+    register_kernel theano-1.0 "Theano (Python 3.8, AIStack)"
+    [[ -z "${ENV_ERRORS[theano-1.0]}" ]] && mark_done theano-1.0
 }
 
-log "=== LEGACY: rapids ==="
-begin_env rapids 3.7 && {
-    conda_install rapids -c rapidsai -c nvidia -c numba -c conda-forge cudf=21.06 cudatoolkit=11.2
-    register_kernel rapids "Rapids (Python 3.7)"
-    [[ -z "${ENV_ERRORS[rapids]}" ]] && mark_done rapids
+log "=== LEGACY: caffe-1.0 ==="
+begin_env caffe-1.0 3.7 && {
+    install_common_legacy "caffe-1.0"
+    conda_install caffe-1.0 -c anaconda caffe-gpu=1.0
+    register_kernel caffe-1.0 "Caffe (Python 3.7, AIStack)"
+    [[ -z "${ENV_ERRORS[caffe-1.0]}" ]] && mark_done caffe-1.0
+}
+
+log "=== LEGACY: rapids-21.06 ==="
+begin_env rapids-21.06 3.7 && {
+    install_common_legacy "rapids-21.06"
+    # Pin pyarrow=1.0.1 in the same solve as cudf itself -- cudf=21.06's
+    # compiled extensions are built against that exact (CUDA-enabled)
+    # conda-forge pyarrow build. install_common_legacy just pip-installed
+    # "datasets" (COMMON_PKGS), which drags in a modern pyarrow (observed:
+    # 12.0.1) with no coordination with cudf's ABI requirements, silently
+    # breaking `import cudf` (ImportError: cannot import name
+    # 'FileEncryptionProperties' from 'pyarrow._parquet') even though both
+    # installs individually report success.
+    #
+    # pip uninstall first, always: this conda build's pypi-interop layer
+    # ("conda-pypi beta") sees an existing pip-tracked pyarrow entry of
+    # the same name/version and silently no-ops the conda install instead
+    # of relinking its own files -- observed leaving a half-deleted
+    # pyarrow/ (pip's uninstall removed the files it owned, conda never
+    # replaced them) that fails with AttributeError: module 'pyarrow' has
+    # no attribute '__version__'. --force-reinstall makes conda relink
+    # every file from its package cache regardless of what it thinks is
+    # already there, so this is safe to run on every re-run.
+    "$CONDA_DIR/envs/rapids-21.06/bin/pip" uninstall -y pyarrow \
+        >> "$LOG_DIR/rapids-21.06.log" 2>&1 || true
+    conda_install rapids-21.06 -c rapidsai -c nvidia -c numba -c conda-forge \
+        cudf=21.06 cudatoolkit=11.2 "pyarrow=1.0.1" --force-reinstall
+    register_kernel rapids-21.06 "Rapids (Python 3.7, AIStack)"
+    [[ -z "${ENV_ERRORS[rapids-21.06]}" ]] && mark_done rapids-21.06
 }
 
 # =============================================================================
 # SUMMARY
 # =============================================================================
 ALL_ENVS=(
-    unsloth transformers accelerate trl axolotl llamafactory torchtune
-    vllm sglang lmdeploy rayserve tgi
+    unsloth transformers accelerate trl axolotl llamafactory torchtune nemo deepspeed
+    vllm sglang lmdeploy rayserve tgi tensorrt-llm
     llamaindex langchain haystack
     mlflow
-    pytorch tensorflow Theano Caffe rapids
+    diffusion
+    pytorch-2.8 tensorflow-2.20 theano-1.0 caffe-1.0 rapids-21.06
 )
 
 echo ""

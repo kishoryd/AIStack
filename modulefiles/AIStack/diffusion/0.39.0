@@ -1,0 +1,38 @@
+#%Module1.0
+#
+# AIStack :: Diffusion Models 0.39.0
+# Generation
+# CUDA: 12.8 (cu128 wheel index)
+#
+
+module-whatis "AIStack Diffusion Models 0.39.0 :: Generation, CUDA: 12.8 (cu128 wheel index)"
+
+proc ModulesHelp { } {
+    puts stderr ""
+    puts stderr "  Diffusion Models 0.39.0"
+    puts stderr "  Category : Generation"
+    puts stderr "  CUDA     : 12.8 (cu128 wheel index)"
+    puts stderr "  Prefix   : /home/apps/miniconda/envs/diffusion"
+    puts stderr ""
+    puts stderr "  This module does not change your shell prompt. To confirm it loaded:"
+    puts stderr "    echo \$CONDA_DEFAULT_ENV"
+    puts stderr "    which python"
+    puts stderr ""
+}
+
+# One conda env active at a time: loading another MLDL/AIStack module
+# swaps this one out instead of stacking PATH entries.
+family "condaenv"
+
+set envpath /home/apps/miniconda/envs/diffusion
+
+if { ![file isdirectory $envpath] } {
+    puts stderr "AIStack/diffusion/0.39.0: $envpath does not exist"
+    break
+}
+
+setenv       CONDA_PREFIX       $envpath
+setenv       CONDA_DEFAULT_ENV  diffusion
+setenv       CONDA_SHLVL        1
+setenv       VIRTUAL_ENV        $envpath
+prepend-path PATH               $envpath/bin
