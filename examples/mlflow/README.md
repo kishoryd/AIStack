@@ -20,9 +20,10 @@ squeue -u $USER
 cat aistack-mlflow-llm-test-*.log
 ```
 
-Results land in the `aistack-smoke-test` experiment on the MLflow server
-(`http://172.40.0.23:5551`, or tunnel it to your own machine:
-`ssh -L 5551:localhost:5551 172.40.0.23`).
+Results land in the `aistack-smoke-test` experiment on the MLflow
+server at `http://172.40.0.23:5551` -- or tunnel it to your own
+machine: `ssh -L 5551:localhost:5551 172.40.0.23`. (The 1hr variant
+below logs to `dl-experiment` instead.)
 
 Both scripts pass `log_system_metrics=True` to `mlflow.start_run()`, so
 each run also gets CPU/GPU utilization, memory, disk, and network I/O
